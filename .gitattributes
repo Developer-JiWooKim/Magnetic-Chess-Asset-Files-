@@ -1,0 +1,6 @@
+Unity filter=lfs diff=lfs merge=lfs -text
+Files filter=lfs diff=lfs merge=lfs -text
+Magnetic filter=lfs diff=lfs merge=lfs -text
+Chess filter=lfs diff=lfs merge=lfs -text
+C:/Users/admin/Desktop/Upload[[:space:]]File/Magnetic[[:space:]]Chess[[:space:]]Unity[[:space:]]Files/Assets/External[[:space:]]Assets/LeartesStudios/Wills[[:space:]]Room/URP filter=lfs diff=lfs merge=lfs -text
+C:/Users/admin/Desktop/Upload[[:space:]]File/Magnetic[[:space:]]Chess[[:space:]]Unity[[:space:]]Files/Assets/External[[:space:]]Assets/LeartesStudios/Wills[[:space:]]Room filter=lfs diff=lfs merge=lfs -text
