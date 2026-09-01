@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -17,12 +16,10 @@ public class GuideText_FadeEffect : MonoBehaviour
 
     private IEnumerator FadeEffect()
     {
-        while(gameObject.activeSelf)
+        while (gameObject.activeSelf)
         {
             yield return StartCoroutine(FadeEffect_UI.FadeOut_TextMeshPro(guideText, fadeTime));
             yield return StartCoroutine(FadeEffect_UI.FadeIn_TextMeshPro(guideText, fadeTime));
         }
     }
-
-    
 }

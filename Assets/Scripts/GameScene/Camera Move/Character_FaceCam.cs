@@ -16,7 +16,7 @@ public class Character_FaceCam : MonoBehaviour
         int[] index = new int[2];
         index[__INDEX_0] = Random.Range(0, face_Characters.Length);
         index[__INDEX_1] = Random.Range(0, face_Characters.Length);
-        // 서로 다른 캐릭터를 비추기 위해 인덱스가 겹치지 않게 설정
+
         while (index[__INDEX_0] == index[__INDEX_1])
         {
             index[__INDEX_1] = Random.Range(0, face_Characters.Length);

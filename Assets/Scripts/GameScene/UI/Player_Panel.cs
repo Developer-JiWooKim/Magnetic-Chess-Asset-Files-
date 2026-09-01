@@ -30,7 +30,6 @@ public class Player_Panel : Player_Panel_Base
     }
     public void SetName()
     {
-        // 현재 게임 모드가 AI이면 Player 2 패널의 플레이어 이름을 AI로 변경 아니면 
         bool isAIMode = GameManager.Instance.gameSetting.gameMode == GameMode.AI;
         switch (playerName)
         {

@@ -4,9 +4,9 @@ using UnityEngine;
 public class MenuBar : MonoBehaviour
 {
     [SerializeField]
-    private RectTransform background;      // 늘어나고 줄어드는 메뉴 테두리
+    private RectTransform background;
     [SerializeField]
-    private MenuList menu;              // 
+    private MenuList menu;
     [SerializeField]
     private float sizeUpSpeed = 1000f;
     [SerializeField]
@@ -48,9 +48,6 @@ public class MenuBar : MonoBehaviour
             new Vector2(__TITLE_BEFORE_X, background.GetComponent<RectTransform>().sizeDelta.y);
     }
 
-    /// <summary>
-    /// 메뉴 테두리 늘어나는 연출용 코루틴
-    /// </summary>
     private IEnumerator IncreaseBar(float __beforeX, float __afterX)
     {
         background.sizeDelta = new Vector2(__beforeX, background.sizeDelta.y);
@@ -63,9 +60,7 @@ public class MenuBar : MonoBehaviour
         background.sizeDelta = new Vector2(__afterX, background.sizeDelta.y);
         EndAnimation();
     }
-    /// <summary>
-    /// 메뉴 테두리 줄어드는 연출용 코루틴
-    /// </summary>
+
     private IEnumerator DecreaseBar(float __beforeX, float __afterX)
     {
         background.sizeDelta = new Vector2(__afterX, background.sizeDelta.y);
@@ -78,10 +73,6 @@ public class MenuBar : MonoBehaviour
         background.sizeDelta = new Vector3(__beforeX, background.sizeDelta.y);
     }
 
-    /// <summary>
-    /// 늘어나는 연출 이후 현재 상태를 정하는 함수(늘어난 상태이면 isShowList를 true 그 반대이면 false)
-    /// 메뉴 리스트의 메뉴들 보이게할지, 안보이게 할지 정함
-    /// </summary>
     private void EndAnimation()
     {
         isShowList = !isShowList;

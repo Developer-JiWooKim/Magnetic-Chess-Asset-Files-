@@ -6,7 +6,7 @@ public class SoundManager : MonoBehaviour
     /// Singleton Pattern
     /// </summary>
     private static SoundManager instance;
-    public static SoundManager Instance 
+    public static SoundManager Instance
     {
         get
         {
@@ -43,7 +43,7 @@ public class SoundManager : MonoBehaviour
     private AudioClip[] bgm = null;
     [SerializeField]
     private AudioClip[] sfx = null;
-    
+
     [SerializeField]
     private AudioSource bgm_Player = null;
     [SerializeField]
@@ -59,9 +59,6 @@ public class SoundManager : MonoBehaviour
     {
         Setup();
     }
-    /// <summary>
-    /// 싱글톤 처리하는 함수
-    /// </summary>
     private void SingletonSetup()
     {
         if (instance == null)
@@ -76,7 +73,6 @@ public class SoundManager : MonoBehaviour
     }
     private void Setup()
     {
-        // 사운드 플레이어 설정, 타이틀 BGM재생
         {
             bgm_Player.playOnAwake = true;
             bgm_Player.loop = true;
@@ -115,7 +111,7 @@ public class SoundManager : MonoBehaviour
     {
         for (int j = 0; j < sfx_Player.Length; j++)
         {
-            // SFX 플레이어 중 재생 중이지 않은 AudioSource를 발견하면
+
             if (!sfx_Player[j].isPlaying)
             {
                 sfx_Player[j].clip = sfx[(int)sfx_Name];

@@ -1,4 +1,3 @@
-// Player or AI·Î ¼³Á¤
 public enum PlayerName { Player_1, Player_2, Player_AI }
 
 public class Player

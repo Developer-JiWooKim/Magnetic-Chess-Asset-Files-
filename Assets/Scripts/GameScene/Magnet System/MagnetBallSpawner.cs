@@ -11,9 +11,6 @@ public class MagnetBallSpawner : MonoBehaviour
         magnetBallMemoryPool = GetComponent<MagnetBallMemoryPool>();
     }
 
-    /// <summary>
-    /// 위치와 회전값을 받아 해당 위치에 마그넷볼을 스폰하는 함수
-    /// </summary>
     public void SpawnMagnetBall(Vector3 pos, Quaternion rot)
     {
         magnetBallMemoryPool.ActivateMagnetBall(pos, rot);

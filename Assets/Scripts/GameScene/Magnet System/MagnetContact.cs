@@ -21,39 +21,33 @@ public class MagnetContact : MonoBehaviour
     }
 
 
-    /// <summary>
-    /// MagnetBall³¢¸® ºÎµúÈ÷¸é Á¢ÃË »óÅÂ·Î º¯°æ
-    /// </summary>
     private void OnCollisionEnter(Collision collision)
     {
         if (isContact)
         {
-            // ÀÌ¹Ì Á¢ÃËµÈ »óÅÂ¸é ½Ã°£ Ãß°¡ X
             return;
         }
         if (collision.collider.tag == "Magnet")
         {
-            //°ÔÀÓ °ü¸®ÀÚ¸¦ Ã£¾Æ È®ÀÎ ½Ã°£À» Ãß°¡ -µÎ°³°¡ µ¿½Ã¿¡ È£ÃâµÇ¹Ç·Î ½Ã°£À» ¹ÝÀ¸·Î ³ª´®
-           GameDirector director = FindObjectOfType<GameDirector>();
-           director.confirmTime += (GameManager.Instance.gameSetting.waitingTime / 2);
-            Debug.Log("OnCollisionEnter()¿¡¼­ °ÔÀÓµð·ºÅÍ¸¦ Ã£¾Æ confirmTimeÀ» " + (GameManager.Instance.gameSetting.waitingTime / 2) + "¸¸Å­ Ãß°¡");
+
+            GameDirector director = FindObjectOfType<GameDirector>();
+            director.confirmTime += (GameManager.Instance.gameSetting.waitingTime / 2);
+            Debug.Log("OnCollisionEnter()ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Óµï¿½ï¿½Í¸ï¿½ Ã£ï¿½ï¿½ confirmTimeï¿½ï¿½ " + (GameManager.Instance.gameSetting.waitingTime / 2) + "ï¿½ï¿½Å­ ï¿½ß°ï¿½");
 
 
             isContact = true;
         }
     }
 
-    // ºñÈ°¼ºÈ­ µÉ ¶§ isContact º¯¼ö¸¦ ÃÊ±âÈ­ 
     private void OnDisable()
     {
-        if (spawnPoint != null) 
+        if (spawnPoint != null)
         {
             spawnPoint.GetComponent<MagnetBallSpawnPoint>().ChangeIsEmpty();
         }
         isContact = false;
     }
 
-    // È°¼ºÈ­ µÉ ¶§ isContact º¯¼ö¸¦ ÃÊ±âÈ­
     private void OnEnable()
     {
         isContact = false;

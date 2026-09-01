@@ -3,9 +3,8 @@ using UnityEngine;
 
 public class DontDestroy_Menu : MonoBehaviour
 {
-    // title, game 씬에서 사용되는 메뉴를 파괴되지 않는 오브젝트로 설정
     private static DontDestroy_Menu instance = null;
-    public static DontDestroy_Menu Instance { get { return instance;  } }
+    public static DontDestroy_Menu Instance { get { return instance; } }
     public enum SceneName
     {
         Title,
@@ -28,9 +27,6 @@ public class DontDestroy_Menu : MonoBehaviour
     {
         SingletonSetup();
     }
-    /// <summary>
-    /// 싱글톤 처리하는 함수
-    /// </summary>
     private void SingletonSetup()
     {
         if (instance == null)

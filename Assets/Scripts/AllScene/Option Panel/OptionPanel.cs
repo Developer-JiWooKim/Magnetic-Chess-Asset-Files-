@@ -14,11 +14,9 @@ public class OptionPanel : MonoBehaviour
     }
     private void Setup()
     {
-        // 데이터 매니저로 저장되어있는 사운드 옵션값을 불러옴
         slider_BGM.value = DataManager.Instance.data.volume_value_BGM;
         slider_SFX.value = DataManager.Instance.data.volume_value_SFX;
 
-        // 가져온 옵션값으로 초기화
         SetVolume_BGM();
         SetVolume_SFX();
     }

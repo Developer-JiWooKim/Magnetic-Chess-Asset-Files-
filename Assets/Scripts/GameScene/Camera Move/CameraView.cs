@@ -13,7 +13,7 @@ public class CameraView : MonoBehaviour
 
     private const float __MOVE_SPEED = 3f;
 
-    public Transform QuarterView_tr 
+    public Transform QuarterView_tr
     {
         get
         {
@@ -28,9 +28,9 @@ public class CameraView : MonoBehaviour
             }
         }
     }
-    public Transform TopView_tr 
-    { 
-        get 
+    public Transform TopView_tr
+    {
+        get
         {
             if (topView != null)
             {
@@ -65,12 +65,8 @@ public class CameraView : MonoBehaviour
         TopView,
     }
 
-    /// <summary>
-    /// 부드러운 카메라 이동 코루틴
-    /// </summary>
     private IEnumerator SmoothMoveCamera(Transform target, Action action = null)
     {
-        // 현재 위치와 목표 위치의 거리가 0.05f이하면 이동을 종료
         while ((transform.position - target.position).magnitude > 0.05f)
         {
             transform.position = Vector3.Lerp(transform.position, target.position, Time.deltaTime * __MOVE_SPEED);
@@ -82,9 +78,6 @@ public class CameraView : MonoBehaviour
             action();
         }
     }
-    /// <summary>
-    /// 카메라 시점 변경 함수
-    /// </summary>
     public void ChangeCameraView(Transform target, Action action = null)
     {
         StartCoroutine(SmoothMoveCamera(target, action));
