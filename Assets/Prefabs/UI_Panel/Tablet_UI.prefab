@@ -557,12 +557,12 @@ PrefabInstance:
     - target: {fileID: 7245270411468405909, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: HidePanel
+      value: Hide
       objectReference: {fileID: 0}
     - target: {fileID: 7245270411468405909, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
-      value: ShowPanel
+      value: Show
       objectReference: {fileID: 0}
     - target: {fileID: 7245270411468405909, guid: 1df35846939618045860f2a830272020,
         type: 3}
