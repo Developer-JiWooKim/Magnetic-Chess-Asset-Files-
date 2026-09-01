@@ -28,7 +28,7 @@ namespace Assets.Scripts.MainMenu
         }
         public void OnClickOnlineBattleButton()
         {
-            GameManager.Instance.gameSetting.gameMode = GameMode.OnlineMulti;
+            GameManager.Instance.SetGameMode(GameMode.OnlineMulti);
         }
     }
 }

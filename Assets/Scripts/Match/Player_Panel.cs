@@ -33,7 +33,7 @@ namespace Assets.Scripts.Match
         }
         public void SetName()
         {
-            bool isAIMode = GameManager.Instance.gameSetting.gameMode == GameMode.AI;
+            bool isAIMode = GameManager.Instance.CurrentSetting.gameMode == GameMode.AI;
             switch (playerName)
             {
                 case PlayerName.Player_1:

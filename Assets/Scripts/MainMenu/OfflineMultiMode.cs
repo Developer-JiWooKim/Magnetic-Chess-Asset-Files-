@@ -29,7 +29,7 @@ namespace Assets.Scripts.MainMenu
         }
         public void OnClickOfflineMultiButton()
         {
-            GameManager.Instance.gameSetting.gameMode = GameMode.OfflineMulti;
+            GameManager.Instance.SetGameMode(GameMode.OfflineMulti);
         }
     }
 }

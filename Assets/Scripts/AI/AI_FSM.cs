@@ -12,10 +12,10 @@ namespace Assets.Scripts.AI
 
         private List<MagnetBallSpawnPoint> spawnPointList;
 
-        private List<Transform> emptyPointsTransform = new List<Transform>();
-        private List<Transform> notEmptyPointsTransform = new List<Transform>();
+        private List<Transform> emptyPointsTransform = new();
+        private List<Transform> notEmptyPointsTransform = new();
 
-        private List<int> final_index = new List<int>();
+        private List<int> final_index = new();
 
         private void Awake()
         {

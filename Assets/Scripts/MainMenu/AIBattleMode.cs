@@ -28,7 +28,7 @@ namespace Assets.Scripts.MainMenu
         }
         public void OnClickAIBattleButton()
         {
-            GameManager.Instance.gameSetting.gameMode = GameMode.AI;
+            GameManager.Instance.SetGameMode(GameMode.AI);
         }
     }
 }

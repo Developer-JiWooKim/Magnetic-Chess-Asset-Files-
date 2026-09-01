@@ -51,7 +51,7 @@ namespace Assets.Scripts.Match
 
         public float confirmTime;
 
-        private GameSetting GameSetting { get; set; }
+        private GameSetting currentSetting;
         public bool isPlaying { get; private set; }
 
         private void Start()
@@ -77,7 +77,7 @@ namespace Assets.Scripts.Match
                 case E_GameState.Player_2:
                     inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[__PLAYER__2].playerName);
 
-                    if (GameSetting.gameMode == GameMode.AI)
+                    if (currentSetting.gameMode == GameMode.AI)
                     {
 
                         isTouch = true;
@@ -125,7 +125,7 @@ namespace Assets.Scripts.Match
         }
         private IEnumerator StartTimer()
         {
-            confirmTime = GameSetting.waitingTime;
+            confirmTime = currentSetting.waitingTime;
 
             int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
 
@@ -170,10 +170,10 @@ namespace Assets.Scripts.Match
             }
 
 
-            if (GameSetting.maxTurn < __TURN_INFINITY__)
+            if (currentSetting.maxTurn < __TURN_INFINITY__)
             {
 
-                if (GameSetting.maxTurn == turnCount && gameState == E_GameState.Player_2)
+                if (currentSetting.maxTurn == turnCount && gameState == E_GameState.Player_2)
                 {
 
                     isPlaying = false;
@@ -302,7 +302,7 @@ namespace Assets.Scripts.Match
             result_Panel.Show();
 
 
-            if (GameSetting.gameMode == GameMode.AI)
+            if (currentSetting.gameMode == GameMode.AI)
             {
 
                 if (winPlayer == E_GameState.Player_2)
@@ -326,7 +326,9 @@ namespace Assets.Scripts.Match
         private void Initialize_GameSettings()
         {
 
-            GameSetting = GameManager.Instance.gameSetting;
+            // GameSetting은 struct라 여기서 값이 복사된다. 즉 이 시점 이후 GameManager 쪽 설정이
+            // 바뀌어도 진행 중인 판에는 반영되지 않는다(판 시작 시점의 설정으로 끝까지 진행).
+            currentSetting = GameManager.Instance.CurrentSetting;
 
 
             if (playerList != null)
@@ -338,21 +340,21 @@ namespace Assets.Scripts.Match
             int totalPieceCount = 0;
 
 
-            switch (GameSetting.gameMode)
+            switch (currentSetting.gameMode)
             {
                 case GameMode.OfflineMulti:
 
                     playerList.Add(new Player(PlayerName.Player_1));
                     playerList.Add(new Player(PlayerName.Player_2));
-                    playerList.ForEach(player => totalPieceCount += player.PieceCount = GameSetting.pieceCount);
+                    playerList.ForEach(player => totalPieceCount += player.PieceCount = currentSetting.pieceCount);
 
                     magnetBallSpawner.GetComponent<MagnetBallMemoryPool>().InstantiateMagnetBall(totalPieceCount);
                     break;
                 case GameMode.AI:
                     playerList.Add(new Player(PlayerName.Player_1));
                     playerList.Add(new Player(PlayerName.Player_AI));
-                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_1).PieceCount = GameSetting.pieceCount;
-                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_AI).PieceCount = GameSetting.pieceCount_AI;
+                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_1).PieceCount = currentSetting.pieceCount;
+                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_AI).PieceCount = currentSetting.pieceCount_AI;
 
 
                     magnetBallSpawner.GetComponent<MagnetBallMemoryPool>().InstantiateMagnetBall(totalPieceCount);
@@ -428,7 +430,7 @@ namespace Assets.Scripts.Match
             magnetBallSpawner.DeactivateAllMagnetBall();
 
 
-            if (GameSetting.gameMode == GameMode.AI)
+            if (currentSetting.gameMode == GameMode.AI)
             {
                 aiFSM.SpawnPoint_Initialize();
             }

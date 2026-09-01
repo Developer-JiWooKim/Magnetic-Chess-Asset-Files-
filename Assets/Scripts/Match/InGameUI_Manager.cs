@@ -132,13 +132,13 @@ namespace Assets.Scripts.Match
         }
         public void UpdateUI_TurnText(int _turnCount)
         {
-            if (GameManager.Instance.gameSetting.maxTurn > 100)
+            if (GameManager.Instance.CurrentSetting.maxTurn > 100)
             {
                 turnText.text = "Max Turn [ Infinity ]\n<size=80>Turn [ " + _turnCount.ToString() + " ]";
             }
             else
             {
-                turnText.text = "Max Turn [ " + GameManager.Instance.gameSetting.maxTurn.ToString() + " ]\n<size=80>Turn [ " + _turnCount.ToString() + " ]";
+                turnText.text = "Max Turn [ " + GameManager.Instance.CurrentSetting.maxTurn.ToString() + " ]\n<size=80>Turn [ " + _turnCount.ToString() + " ]";
             }
         }
         public void Hide_TurnText()

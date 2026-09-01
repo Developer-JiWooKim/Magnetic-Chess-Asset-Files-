@@ -9,7 +9,20 @@ namespace Assets.Scripts.Core
 {
     public sealed class GameManager : Singleton<GameManager>
     {
-        public GameSetting gameSetting;
+        [SerializeField]
+        private GameSetting gameSetting;
+
+        /// <summary>
+        /// 현재 게임 설정(읽기 전용). GameSetting은 struct라 이 프로퍼티는 복사본을 돌려주므로,
+        /// 값을 바꾸려면 반드시 아래 Set 메서드들을 거쳐야 한다.
+        /// </summary>
+        public GameSetting CurrentSetting => gameSetting;
+
+        public void SetGameMode(GameMode mode) => gameSetting.gameMode = mode;
+        public void SetPieceCount(int count) => gameSetting.pieceCount = count;
+        public void SetPieceCount_AI(int count) => gameSetting.pieceCount_AI = count;
+        public void SetWaitingTime(float seconds) => gameSetting.waitingTime = seconds;
+        public void SetMaxTurn(int turn) => gameSetting.maxTurn = turn;
 
         public event Action ChangeSceneAction;
 
@@ -39,8 +52,6 @@ namespace Assets.Scripts.Core
 
         private void DefaultGameOption()
         {
-            Debug.Log("������ ó�� ������");
-
             OptionData data = new OptionData();
 
             SoundManager.Instance.SetDefaultVolume();
@@ -56,17 +67,15 @@ namespace Assets.Scripts.Core
         {
             DataManager.Instance.SaveGameOptionData();
         }
-        public GameSetting DefaultGameSetting()
+        private void DefaultGameSetting()
         {
+            gameSetting = new GameSetting
             {
-                gameSetting = new GameSetting();
-
-                gameSetting.gameMode = GameMode.OfflineMulti;
-                gameSetting.pieceCount = 20;
-                gameSetting.maxTurn = 20;
-                gameSetting.waitingTime = 1f;
-                return gameSetting;
-            }
+                gameMode = GameMode.OfflineMulti,
+                pieceCount = 20,
+                maxTurn = 20,
+                waitingTime = 1f,
+            };
         }
 
         public void AsyncLoadGameScene()

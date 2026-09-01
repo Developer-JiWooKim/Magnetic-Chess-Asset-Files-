@@ -34,7 +34,7 @@ namespace Assets.Scripts.Magnet
             if (collision.collider.CompareTag("Magnet"))
             {
                 // 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.
-                GameDirector.Instance.confirmTime += (GameManager.Instance.gameSetting.waitingTime / 2);
+                GameDirector.Instance.confirmTime += (GameManager.Instance.CurrentSetting.waitingTime / 2);
 
                 isContact = true;
             }

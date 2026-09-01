@@ -235,4 +235,31 @@ Assets/Scripts/
 
 ---
 
+## 2026-09-01 — Phase 3: GameManager 캡슐화
+
+**관련 계획:** `wiggly-scribbling-wave.md` Phase 3
+
+**작업 내용:**
+- `GameManager.gameSetting`을 `public` 필드에서 **`[SerializeField] private` 필드 + 읽기 전용 프로퍼티 `CurrentSetting`** 으로 변경. 값 변경은 명시적 메서드로만:
+  `SetGameMode()`, `SetPieceCount()`, `SetPieceCount_AI()`, `SetWaitingTime()`, `SetMaxTurn()`
+- `[SerializeField]`를 유지한 이유: 기존에 `public` 필드로 Unity가 직렬화하던 값이라, 그냥 private으로만 바꾸면 씬에 저장돼 있던 값이 사라지고 씬이 dirty 처리됨. 필드명이 그대로라 직렬화 데이터는 그대로 매핑됨.
+- **struct라서 얻는 이득**: `GameSetting`이 struct이므로 `CurrentSetting`은 복사본을 돌려줌. 따라서 `GameManager.Instance.CurrentSetting.pieceCount = 5` 같은 코드는 **컴파일 에러(CS1612)** 가 됨 — 캡슐화가 규칙이 아니라 컴파일러로 강제됨.
+- 외부 변경 지점 9곳을 전부 setter 호출로 교체:
+  - `AIBattleMode`, `OfflineMultiMode`, `OnlineBattleMode` → `SetGameMode(...)`
+  - `GameSettingMenu`의 드롭다운 핸들러 4개 + `SetDefaultSetting()`
+- 외부 읽기 지점 6곳을 `CurrentSetting`으로 교체: `MagnetContact`, `GameSettingPanel`, `InGameUI_Manager`(2곳), `Player_Panel`, `GameDirector`
+- `GameManager.DefaultGameSetting()` 정리: 반환값을 아무도 쓰지 않아 `public GameSetting` → `private void`로, 의미 없는 중첩 중괄호 제거하고 객체 초기화 구문으로 변경.
+- `GameDirector`의 `private GameSetting GameSetting { get; set; }` → `private GameSetting currentSetting;` 로 개명. **프로퍼티명이 타입명과 완전히 같아서** 코드를 읽을 때 타입인지 값인지 구분이 안 되던 문제 해소.
+- `GameDirector.Initialize_GameSettings()`의 복사 지점에 주석 추가 — struct 복사라 **판 시작 시점의 설정으로 끝까지 진행**되고, 도중에 GameManager 설정이 바뀌어도 진행 중인 판에는 반영되지 않는다는 점을 명시.
+
+**바인딩 안전성 확인 (Phase 0 교훈 적용):** `GameSettingMenu`의 `SetPieceCount`/`SetPieceCount_AI`/`SetWaitingTime`/`SetMaxTurn` 4개는 `GameSettingPanel.prefab`, `Tablet_UI.prefab`, `GameScene.unity` **3곳씩** 드롭다운 이벤트에 바인딩되어 있음을 사전 확인 → **메서드명을 바꾸지 않고 본문만** 교체. `SetDefaultSetting`, `DefaultGameSetting`, `DefaultGameOption`은 바인딩이 없어 자유롭게 변경 가능함도 확인.
+
+**이전 상태:** `public GameSetting gameSetting;` 이 그대로 노출되어 있어 설정 패널·모드 버튼·UI 등 아무 데서나 `GameManager.Instance.gameSetting.pieceCount = ...` 식으로 직접 필드를 찔러 쓸 수 있었음. 어디서 설정이 바뀌는지 추적이 불가능했음.
+
+**검증:** `dotnet build` — 우리 코드 오류/경고 0건. 외부에서 `.gameSetting` 직접 접근이 0건임도 확인.
+
+**에디터 작업:** 없음 (메서드명 변경이 없어 재바인딩 불필요).
+
+---
+
 <!-- 이후 작업은 이 아래에 최신순으로 추가 -->

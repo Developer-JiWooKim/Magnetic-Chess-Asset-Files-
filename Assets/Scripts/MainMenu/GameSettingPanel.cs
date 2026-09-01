@@ -32,7 +32,7 @@ namespace Assets.Scripts.MainMenu
 
         private void ModeAI_Setting()
         {
-            if (GameManager.Instance.gameSetting.gameMode == GameMode.AI)
+            if (GameManager.Instance.CurrentSetting.gameMode == GameMode.AI)
             {
                 PieceCount_AI_Option.SetActive(true);
             }
