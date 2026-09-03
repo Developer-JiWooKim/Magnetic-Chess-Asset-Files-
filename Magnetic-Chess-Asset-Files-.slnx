@@ -20,8 +20,8 @@
   <Project Path="Unity.VisualScripting.Flow.Editor.csproj" />
   <Project Path="Unity.ProBuilder.Csg.csproj" />
   <Project Path="Cinemachine.csproj" />
-  <Project Path="Unity.VisualStudio.Editor.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Unity.VisualStudio.Editor.csproj" />
   <Project Path="Unity.Searcher.Editor.csproj" />
   <Project Path="Unity.ProBuilder.Editor.csproj" />
   <Project Path="UnityEditor.TestRunner.csproj" />

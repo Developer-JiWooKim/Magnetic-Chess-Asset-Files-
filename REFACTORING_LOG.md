@@ -1,264 +1,868 @@
-# 리팩토링 기록
+# Magnetic Chess — 리팩토링 기록
 
-Unity 2022.3 → 6.5.3 업그레이드를 계기로 진행하는 코드 리팩토링 작업 기록. 각 항목은 "무엇을 왜 바꿨고, 이전엔 어떻게 되어있었는지"를 남긴다. 전체 계획은 `C:\Users\Admin\.claude\plans\wiggly-scribbling-wave.md` 참고.
+2020년에 Google Play에 출시했던 개인 프로젝트를 Unity 2022.3 → **Unity 6 (6000.5.3f1)** 로 이식하면서, 당시의 코드를 전면적으로 개선한 과정을 기록한 문서다. 각 항목은 **① 문제 상황 → ② 이전 코드 → ③ 변경 후 코드 → ④ 판단 근거 → ⑤ 결과 → ⑥ 계획 대비 달라진 점**의 형식으로 남긴다.
 
----
+- **엔진:** Unity 6000.5.3f1 (URP 17.5), C# 9.0 / netstandard2.1
+- **규모:** C# 스크립트 49개
+- **기준 커밋:** 리팩토링 이전 상태는 `ae059ef`
+- **전체 계획:** `wiggly-scribbling-wave.md`
+- **검증 방식:** 자동 테스트가 없는 프로젝트라, 각 단계마다 `dotnet build`로 컴파일을 검증하고 실제 플레이(오프라인 2인 대전 / AI 대전)로 회귀를 확인했다.
 
-## 2026-09-01 — Unity 6.5.3 업그레이드 + 스크립트 인코딩 정리
+## 한눈에 보기
 
-**브랜치/커밋:** `unity6-upgrade` (`ae059ef`)
-
-**작업 내용:**
-- 프로젝트를 Unity 2022.3에서 6.5.3(6000.5.3f1)으로 업그레이드. URP 17.5, TextMeshPro 등 관련 패키지가 재직렬화되며 다수의 `.mat` 파일이 갱신됨.
-- 전체 51개 C# 스크립트의 인코딩을 CP949(EUC-KR)에서 UTF-8로 변환. 이 과정에서 기존 한글 주석은 전부 제거.
-
-**이전 상태:**
-- 프로젝트가 Unity 2022.3 기준으로 작성되어 있었고, 모든 `.cs` 파일이 CP949로 저장되어 있어 UTF-8 기반 에디터(VSCode, Rider 등)에서 한글 주석이 깨져 보였음(`ISO-8859 text`로 감지됨).
-
-**이유:**
-- Unity 6 업그레이드 겸 예전 프로젝트를 다시 열어보니 CP949 인코딩 문제가 확인되어, 앞으로 코드를 더 손보기 전에 먼저 정리. 어차피 전체적으로 코드를 다시 볼 예정이라 주석은 남기지 않고 제거하기로 결정.
-
----
-
-## 2026-09-01 — Phase 0: UI 패널 구조 통합
-
-**관련 계획:** `wiggly-scribbling-wave.md` Phase 0
-
-**작업 내용:**
-- 새 공통 베이스 `Assets/Scripts/AllScene/UIPanel.cs` 추가. `virtual Show()`(기본 `SetActive(true)`) / `virtual Hide()`(기본 `SetActive(false)`).
-- `Panel_Base`가 `MonoBehaviour` 대신 `UIPanel`을 상속하도록 변경, 자체 `ShowPanel()/HidePanel()` 정의를 제거(이제 `UIPanel`의 것을 그대로 상속). `panel_Name` 필드는 유지.
-- `StartPanel`, `ModeSelectPanel`, `GameSettingPanel`(모두 `Panel_Base` 상속)의 `override ShowPanel()/HidePanel()` → `override Show()/Hide()`로 개명. 호출부인 `Menu_Manager.ChangePanel()`도 `panel.ShowPanel()/HidePanel()` → `panel.Show()/Hide()`로 함께 수정.
-- `MenuButtonBase`(`Show`/`Hide`만 있던 별도 베이스 클래스) 완전 삭제. 이걸 상속하던 `ExitButton`, `OptionButton`, `ResumeButton`, `ListButton`이 전부 `UIPanel`을 직접 상속하도록 변경. `ExitButton`/`OptionButton`은 override 내용이 `UIPanel` 기본 동작과 완전히 같아서 override 자체를 제거(빈 서브클래스로 축소), `ResumeButton`은 `Show()`에 씬 조건부 로직이 있어 그 부분만 유지, `ListButton`은 원래 `Show()/Hide()`가 빈 메서드(no-op)였는데 — 이건 "리스트 토글 버튼 자신은 다른 버튼들과 함께 꺼지면 안 된다"는 의도된 동작이라 그대로 빈 override 유지.
-- `MenuList.cs`의 `List<MenuButtonBase>` → `List<UIPanel>`로 타입 변경 (`GetComponentsInChildren<UIPanel>()`).
-- `OptionPanel`(`MonoBehaviour` → `UIPanel` 상속), `ExitPanel`(`MonoBehaviour` → `UIPanel`), `ResumePanel`(`MonoBehaviour` → `UIPanel`), `Result_Panel`(`MonoBehaviour` → `UIPanel`), `HelpPanel`(`MonoBehaviour` → `UIPanel`)로 전부 통일:
-  - `OptionPanel.ShowPanel()/HidePanel()` → `override Show()/Hide()`
-  - `ResumePanel.OnClickResumeButton()/OnClickContinueButton()` → `override Show()/Hide()` (`OnClickReplayButton`/`OnClickSelectModeButton` 내부에서 쓰던 `OnClickContinueButton()` 호출도 `Hide()`로 변경)
-  - `ExitPanel.OnClickExitButton()/OnClickExit_no_Button()` → `override Show()/Hide()` (`OnClickExit_yes_Button()`은 그대로 유지)
-  - `Result_Panel`은 원래 Show/Hide가 아예 없었음(호출부에서 직접 `SetActive`) — `UIPanel` 상속만 추가하고 기본 동작 사용. 이걸 호출하던 `GameDirector.cs`의 `result_Panel.gameObject.SetActive(true)`(EndBattle) / `SetActive(false)`(Setup)를 각각 `result_Panel.Show()` / `Hide()`로, `Result_Panel.OnClickQuitButton()`의 `exitPanel.OnClickExitButton()`도 `exitPanel.Show()`로 수정
-  - `HelpPanel`은 별도 상태가 없어 override 없이 `UIPanel` 기본 동작 사용
-- **계획에서 수정한 부분**: 원래 계획엔 `Menu_Manager.Change_Start_to_ModeSelect()`가 다른 두 전환 메서드처럼 공통 `ChangePanel()`을 거치도록 고치려 했으나, 구현 중 확인해보니 이건 버그가 아니라 의도된 연출이었음. Start → ModeSelect 전환은 `StartPanel.Hide()`(카메라 페이드아웃 + `MoveStart` 애니메이션 트리거) → 카메라 애니메이션 클립의 Animation Event(`Camera_Animation_Event.Loading_UI_Show()`) → `Tablet_Logic.Tablet_Logic_Start()`가 로딩 스피너를 띄우고 1.5초 뒤에 `ModeSelectPanel.Show()`를 별도로 호출하는 구조. 즉시 `ChangePanel()`을 태우면 이 타이밍 연출이 깨지므로, **전환 흐름 자체는 손대지 않고 메서드명만 통일**(`StartPanel.OnClickStartButton()`은 이름 그대로 유지, 내부에서 `Hide()` 호출; `Tablet_Logic.cs`의 `modeSelectPanel.ShowPanel()` → `Show()`로만 개명).
-
-**이전 상태:**
-- "패널 보이기/숨기기"라는 동일한 개념이 `Panel_Base`(`ShowPanel/HidePanel`), `MenuButtonBase`(`Show/Hide`), 그리고 클래스마다 제각각인 이름(`OnClickResumeButton`, `OnClickExitButton` 등)의 세 갈래로 중복 구현되어 있었음. `Result_Panel`은 아예 Show/Hide 메서드가 없어서 호출부(`GameDirector`)가 `SetActive`를 직접 호출.
-
-**이유:**
-- 여러 패널이 사실상 같은 일(보이기/숨기기)을 서로 다른 이름으로 구현하고 있어 신규 패널 추가나 유지보수 시 일관성이 없었음. Unity 6.5.3 이식을 계기로 전체 구조를 정리하기로 하면서 UI 쪽도 통일 대상에 포함.
-
-**⚠️ 에디터에서 수동으로 재연결해야 하는 버튼 OnClick (TitleScene.unity, 아직 미완료 — 다음에 에디터 열 때 처리 필요):**
-- `ExitPanel.OnClickExitButton` 바인딩 2곳 → `Show()`로 재지정
-- `ExitPanel.OnClickExit_no_Button` 바인딩 1곳 → `Hide()`로 재지정
-- `ResumePanel.OnClickResumeButton` 바인딩 1곳 → `Show()`로 재지정
-- `ResumePanel.OnClickContinueButton` 바인딩 1곳 → `Hide()`로 재지정
-- `OptionPanel.ShowPanel` 바인딩 1곳 → `Show()`로 재지정
-
-~~이 외 메서드(Panel_Base 3종, MenuButtonBase 계열, `OptionPanel.HidePanel`)는 전부 C# 코드에서만 호출되어 재바인딩 불필요함을 확인함.~~ → **이 판단은 틀렸음. 아래 "메뉴 버튼 먹통 수정" 항목 참고** (프리팹을 검색 대상에 넣지 않아 4곳을 놓쳤음).
+| # | 작업 | 핵심 성과 |
+|---|---|---|
+| 0 | UI 패널 구조 통합 | 3갈래로 흩어진 표시/숨김 API를 `UIPanel` 하나로 통합 |
+| 0.5 | 폴더 구조 재편 + namespace | 씬/기능이 혼재된 분류를 기능 기준 6개 폴더로, 전역 클래스 49개에 namespace 부여 |
+| 1 | 핫패스 씬 검색 제거 | **매 물리 프레임** 씬 전체 검색 → 자기등록 리스트, **매 충돌** 씬 검색 → 싱글턴 참조 |
+| 2 | 제네릭 싱글턴 통합 | 4개 클래스에 복붙돼 있던 싱글턴 보일러플레이트를 `Singleton<T>` 하나로 |
+| 3 | GameManager 캡슐화 | public 필드 노출 → 컴파일러가 강제하는 읽기 전용 + 명시적 setter |
 
 ---
 
-## 2026-09-01 — Phase 0.5: 스크립트 폴더 구조 정리
+## Phase 1 — 핫패스에서 씬 전체 검색 제거
 
-**관련 계획:** `wiggly-scribbling-wave.md` Phase 0.5
+### ① 문제 상황
 
-**작업 내용:**
-- `Assets/Scripts/` 하위 폴더를 전부 재편. 모든 이동은 `git mv`로 `.cs`+`.cs.meta` 쌍을 함께 옮겨 GUID(=씬/프리팹의 컴포넌트 참조) 보존.
-- `AllScene/`의 싱글턴·데이터 타입(`GameManager`, `DataManager`, `SoundManager`, `DontDestroy_Menu`, `GameSetting`, `OptionData`) → `Core/`로 이동.
-- `AllScene/`의 UI류(`Menu List/*`, `Exit Panel/*`, `Help Panel/*`, `Option Panel/*`)와 `Title Scene/FadeEffect_UI.cs`(GameScene에서도 쓰는 공용 유틸) → `UI/`로 통합, 하위 폴더 없이 평탄화.
-- `Title Scene/` → `TitleScene/`로 개명, `Canvas_Menu/` 하위 3단 폴더(`Start Panel`, `Mode Select Panel`, `Game Setting Panel`) → `TitleScene/Menu/`로 평탄화.
-- `GameScene/` 하위 폴더명에서 공백 제거(`Camera Move`→`Camera`, `Magnet System`→`Magnet`), `Game System/GameDirector.cs`는 파일이 하나뿐이라 `GameScene/` 바로 밑으로, `MemoryPool/`의 두 파일은 `Magnet/`로 흡수(어차피 Phase 4에서 삭제될 파일들).
-- 이동 후 남은 빈 폴더와 그 폴더들의 stray `.meta`(`AllScene.meta`, `Title Scene.meta`, `Camera Move.meta` 등) 전부 정리.
-- 코드 자체는 네임스페이스가 없어 전역 클래스명으로 참조하므로, 폴더 이동만으로는 `using` 이나 컴파일에 영향 없음 — 실제 `.cs` 내용은 건드리지 않음.
+자석 물리 시뮬레이션의 핵심 루프가 **매 물리 프레임마다 씬 전체를 검색**하고 있었다. `FindObjectsOfType`은 씬의 모든 GameObject를 순회하는 O(n) 연산인데, 이것이 `FixedUpdate`(기본 초당 50회) 안에서 호출된 뒤 다시 O(n²) 자력 계산으로 이어졌다.
 
-**이전 상태:**
-```
-Assets/Scripts/
-  AllScene/ (싱글턴 + UI 패널류가 뒤섞임, 하위에 "Menu List", "Exit Panel" 등 공백 폴더명)
-  GameScene/ ("Camera Move", "Game System", "Magnet System", "MemoryPool" 등 공백 폴더명)
-  Title Scene/ (공백 포함 최상위 폴더명, Canvas_Menu 하위에 3단 중첩)
+또 자석볼끼리 충돌할 때마다 `FindObjectOfType<GameDirector>()`로 씬을 검색해 매니저를 찾고 있었다. 자석볼이 수십 개 붙는 게임 특성상 충돌은 짧은 시간에 대량으로 발생한다.
+
+### ② 이전 코드
+
+```csharp
+// MagnetWorld.cs — 매 물리 프레임 씬 전체 검색
+private void FixedUpdate()
+{
+    if (IsActive == false) { return; }
+
+    Magnet[] magnets = FindObjectsOfType<Magnet>();   // ← 초당 50회 씬 전체 순회
+
+    for (int i = 0; i < magnets.Length; i++) { /* ... O(n²) 자력 계산 ... */ }
+}
 ```
 
-**이유:**
-- 폴더명에 공백/붙여쓰기가 뒤섞여 있었고, "씬 기준" 분류와 "기능 기준" 분류가 한 depth에 섞여 있어 일관성이 없었음. `AllScene`은 특히 싱글턴/데이터와 UI 패널이 구분 없이 섞여 있어 새 스크립트를 어디에 둬야 할지 애매했음. Unity 6.5.3 이식을 계기로 전체 구조를 손보면서 폴더 구조도 함께 정리하기로 함.
+```csharp
+// MagnetContact.cs — 매 충돌마다 씬 전체 검색
+private void OnCollisionEnter(Collision collision)
+{
+    if (isContact) { return; }
+    if (collision.collider.tag == "Magnet")
+    {
+        GameDirector director = FindObjectOfType<GameDirector>();   // ← 충돌마다 씬 전체 순회
+        director.confirmTime += (GameManager.Instance.gameSetting.waitingTime / 2);
+        // 충돌마다 문자열 결합 + 로그. 문자열 리터럴이라 CP949 깨짐이 그대로 남아 있었다.
+        Debug.Log("OnCollisionEnter()에서 ...(깨진 문자열)... confirmTime에 "
+                  + (GameManager.Instance.gameSetting.waitingTime / 2) + " 추가");
+        isContact = true;
+    }
+}
+```
 
-**검증:** Unity 에디터로 열어서 콘솔에 "missing script" 경고가 없는지 확인 필요 (아직 미확인 — 다음에 에디터 열 때 체크).
+### ③ 변경 후 코드
 
----
+```csharp
+// Magnet.cs — 각 자석이 자기 자신을 등록/해제
+public sealed class Magnet : MonoBehaviour
+{
+    private static readonly List<Magnet> activeMagnets = new List<Magnet>();
+    public static IReadOnlyList<Magnet> ActiveMagnets => activeMagnets;
 
-## 2026-09-01 — Phase 0.5 후속: 씬 기준 → 기능 기준 폴더 재편
+    private void OnEnable()  => activeMagnets.Add(this);
+    private void OnDisable() => activeMagnets.Remove(this);
+}
+```
 
-**작업 내용:**
-- 바로 위 Phase 0.5에서 `TitleScene/`·`GameScene/`로 나눴던 구조를 완전히 없애고, 시스템/기능 기준 폴더로 재편. `Core/`, `UI/`는 그대로 두고 나머지를 아래처럼 재배치(전부 `git mv`로 `.cs`+`.cs.meta` 쌍 이동):
-  - `TitleScene/Menu/*`(14개 파일) → `MainMenu/`
-  - `TitleScene/CameraMoving.cs` + `GameScene/Camera/CameraView.cs`, `Character_FaceCam.cs` → `Camera/`(씬 구분 없이 카메라 스크립트 전부 통합)
-  - `GameScene/GameDirector.cs`, `GameScene/Player/Player.cs`, `GameScene/UI/*`(6개 파일) → `Match/`
-  - `GameScene/AI/AI_FSM.cs` → `AI/`(최상위로 승격)
-  - `GameScene/Magnet/*`(7개 파일) → `Magnet/`(최상위로 승격)
-- 이동 후 빈 껍데기만 남은 `TitleScene/`, `GameScene/`와 그 하위 폴더들의 stray `.meta`(`GameScene.meta`, `GameScene/AI.meta`, `GameScene/Player.meta`, `GameScene/UI.meta`) 전부 제거.
+```csharp
+// MagnetWorld.cs — 검색 없이 리스트를 바로 사용
+IReadOnlyList<Magnet> magnets = Magnet.ActiveMagnets;
+for (int i = 0; i < magnets.Count; i++) { /* ... */ }
+```
 
-**이전 상태:** 바로 위 항목의 "이후 상태"(`TitleScene/`, `GameScene/` 씬 기준 2단 분류)가 이번 항목의 "이전 상태"임.
+```csharp
+// MagnetContact.cs
+if (collision.collider.CompareTag("Magnet"))
+{
+    // 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.
+    GameDirector.Instance.confirmTime += GameManager.Instance.CurrentSetting.waitingTime / 2;
+    isContact = true;
+}
+```
 
-**이유:** 사용자가 "왜 TitleScene/GameScene으로 나눴냐"고 물어본 뒤, 씬이 2개뿐인 프로젝트라 기능 기준이 더 낫겠다고 판단해서 요청. 카메라처럼 두 씬에 각각 존재하지만 본질적으로 같은 역할을 하는 스크립트를 한 곳에서 볼 수 있게 됨.
+### ④ 판단 근거
 
----
+**`OnEnable`/`OnDisable`을 고른 이유가 핵심이다.** 이 게임의 자석볼은 오브젝트 풀로 관리되어 `SetActive(false)`로 비활성화된다. 그런데 `FindObjectsOfType<T>()`는 **기본적으로 비활성 오브젝트를 제외**한다. 즉 기존 코드는 "활성 자석만" 계산하고 있었다.
 
-## 2026-09-01 — 전체 스크립트에 폴더 기준 namespace 적용
+`OnEnable`/`OnDisable` 시점 등록은 정확히 이 집합(활성 오브젝트만)과 일치한다. 만약 `Awake`/`OnDestroy`에 등록했다면 풀에서 잠자는 자석까지 계산에 포함되어 **물리 동작이 조용히 달라졌을 것이다.** 성능 최적화에서 동작이 바뀌면 최적화가 아니라 버그다.
 
-**작업 내용:**
-- 51개 스크립트 전부에 `namespace Assets.Scripts.<폴더명>` 적용 (`AI`, `Camera`, `Core`, `MainMenu`, `Magnet`, `Match`, `UI` — 7개, 폴더 구조와 1:1 대응).
-- 프로젝트가 지금까지 네임스페이스가 전혀 없는 전역(global) 클래스 구조였기 때문에, 폴더를 나누는 순간부터 다른 폴더의 타입을 쓰는 곳마다 `using Assets.Scripts.X;`를 추가해야 함 — 파일마다 실제로 참조하는 타입을 전부 추적해서(문자열 리터럴에 있는 동명의 단어는 걸러내고) 필요한 `using`만 정확히 추가.
-- **`Camera` 네임스페이스 충돌 이슈 발견 및 대응**: `Character_FaceCam.cs`가 `UnityEngine.Camera` 타입을 필드로 쓰는데, 이 파일이 `namespace Assets.Scripts.Camera` 안에 들어가면서 `Camera`라는 이름이 자기 네임스페이스 이름과 겹쳐 컴파일 모호성이 발생. 해당 필드 타입을 `UnityEngine.Camera`로 명시적으로 풀네임 처리해서 해결. `GameDirector.cs`의 `Camera.main` 호출도 동일한 이유로 `UnityEngine.Camera.main`으로 수정.
-- C# 언어 버전이 9.0(`LangVersion` 9.0, 파일 스코프 namespace 문법인 C# 10 미지원)이라 `namespace X { ... }` 블록 스타일로 전체 파일 내용을 감싸고 4칸 들여쓰기 적용.
-- **빌드로 실제 검증**: 프로젝트에 이미 생성되어 있던 `Assembly-CSharp.csproj`(Unity/에디터 연동 도구가 자동으로 최신 경로에 맞춰 갱신해둔 상태였음)를 대상으로 `dotnet build`를 돌려서 확인. 우리 스크립트 관련 오류/경고 0건. 빌드에서 뜨는 오류 2건은 Unity ProBuilder 패키지 자체의 기존 버그(`ObjectPool<>` 모호한 참조)로 이번 작업과 무관함을 확인.
+`GameDirector`는 씬에 하나뿐이라 싱글턴이 자연스러웠지만, **GameScene에만 존재하고 씬과 함께 사라져야 하므로** `DontDestroyOnLoad`를 걸면 안 됐다. 그래서 공용 `Singleton<T>`에 `IsPersistent` 훅을 추가해 이 클래스만 `false`로 재정의했다(Phase 2 참고).
 
-**이전 상태:** 모든 클래스가 네임스페이스 없이 전역(global) 스코프에 정의되어 있었음.
+충돌마다 실행되던 `Debug.Log`는 문자열 결합 비용까지 있어 함께 제거하고, 무슨 일을 하는지는 주석으로 남겼다.
 
-**이유:** 폴더 구조를 정리한 김에 네임스페이스도 폴더와 일치시켜서, 어떤 타입이 어느 시스템 소속인지 코드만 보고도 명확히 알 수 있게 하기 위함(사용자 요청).
+### ⑤ 결과
 
----
+- `FixedUpdate`의 씬 전체 순회 **완전 제거** (초당 50회 → 0회)
+- 충돌 콜백의 씬 전체 순회 **완전 제거**, 문자열 결합 로그도 제거
+- 부수적으로 문자열 태그 비교 4곳을 `CompareTag()`로, `Invoke("메서드명")`을 `Invoke(nameof(...))`로 교체해 오타가 컴파일 단계에서 잡히도록 함
 
-## 2026-09-01 — Camera 폴더 해체 및 죽은 코드 제거
+### ⑥ 계획 대비 달라진 점
 
-**작업 내용:**
-- **`Camera/` 폴더 해체**: 세 파일의 실제 사용처를 확인해보니 하나의 시스템이 아니라 이름만 보고 묶인 상태였음.
-  - `CameraView.cs` → `Match/` (유일한 사용처가 `GameDirector`)
-  - `Character_FaceCam.cs` → `Match/` (유일한 사용처가 `InGameUI_Manager`. 이름과 달리 카메라 시스템이 아니라 플레이어 패널의 얼굴 초상화를 비추는 HUD 부속임)
-  - `CameraMoving.cs` → **삭제** (`Start`/`Update`가 빈 껍데기. 코드 참조 0건, 씬·프리팹에 GUID 참조 0건 확인)
-- **`UI/GameOption.cs` 삭제** — 해상도 옵션을 만들려다 만 스텁 클래스. MonoBehaviour도 아니고 참조 0건.
-- 위 폴더 해체로 `UnityEngine.Camera` 이름 충돌의 원인이 사라져서, 직전 작업에서 넣었던 우회 코드를 원복:
-  - `Character_FaceCam.cs`: `UnityEngine.Camera[]` → `Camera[]`
-  - `GameDirector.cs`: `UnityEngine.Camera.main` → `Camera.main`
-  - `GameDirector.cs`/`InGameUI_Manager.cs`에서 불필요해진 `using Assets.Scripts.Camera;` 제거
-- 이동한 두 파일의 namespace를 `Assets.Scripts.Match`로 변경. `dotnet build`로 검증 — 우리 코드 오류 0건.
-
-**⚠️ 삭제하려다 취소한 항목 — `Menu_Manager.All_HidePanel()`:**
-직전 분석에서 "죽은 코드"로 판단했으나, 삭제 직전 재확인 결과 **살아있는 코드**였음. `GameScene.unity`에서 GameSetting 프리팹 인스턴스 오버라이드 형태로 GamePlay 버튼의 OnClick 3번째 호출에 연결되어 있음. 이전 확인이 불완전했던 이유는 `TitleScene.unity`만, 그것도 `m_MethodName: All_HidePanel` 형식으로만 검색했기 때문 — 프리팹 오버라이드는 `propertyPath: ...m_MethodName` / `value: All_HidePanel` 형식이라 걸리지 않았음. **교훈: Unity에서 메서드 삭제 전에는 두 씬 파일 + 프리팹을 대상으로 두 가지 형식 모두 검색할 것.**
-
-**이후 구조 (6개 폴더):** `AI`, `Core`, `MainMenu`, `Magnet`, `Match`, `UI`
-
-**이유:** 폴더 구조 적정성 분석 결과 `Camera/`만 응집도가 없었고(서로 무관한 3개 파일 + 죽은 파일 1개), 네임스페이스 이름 충돌까지 유발하고 있어 해체하는 편이 나았음.
-
----
-
-## 2026-09-01 — Phase 2: 제네릭 싱글턴 베이스로 통합
-
-**관련 계획:** `wiggly-scribbling-wave.md` Phase 2
-
-**작업 내용:**
-- 새 파일 `Assets/Scripts/Core/Singleton.cs` — `public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>`.
-  - 제약을 `where T : MonoBehaviour`가 아니라 **`where T : Singleton<T>`(CRTP)** 로 둠. `class Foo : Singleton<Bar>` 같은 실수를 컴파일 단계에서 걸러내기 위함.
-  - 셋업을 `protected virtual void Awake()`에 둠. 이렇게 하면 파생 클래스가 실수로 `private void Awake()`를 다시 정의했을 때 컴파일러가 "상속된 멤버를 숨깁니다" 경고를 내줌 — Unity에서 가장 흔한 함정(파생 Awake가 베이스 Awake를 가려서 싱글턴이 조용히 초기화되지 않는 문제)에 대한 방어.
-- `GameManager`, `DataManager`, `SoundManager`, `DontDestroy_Menu` 4개가 이 베이스를 상속하도록 변경. 각자 갖고 있던 `instance` 필드 / `Instance` 프로퍼티 / `Awake()` / `SingletonSetup()`을 전부 제거 (4중 중복 → 1곳).
-- `DataManager`만 Awake에 추가 작업(`LoadGameOptionData()`)이 있어서 `protected override void Awake() { base.Awake(); LoadGameOptionData(); }` 형태로 순서를 그대로 보존.
-- `DontDestroy_Menu`는 UnityEngine 타입을 직접 쓰는 코드가 전부 베이스로 올라가서 `using UnityEngine;`도 제거.
-- `dotnet build` 검증 — 우리 코드 오류/경고 0건.
-
-**동작이 미묘하게 달라진 부분(의도한 개선):**
-- **null일 때 로그**: 기존에는 4개가 제각각이었음(`SoundManager`만 로그 출력, `GameManager`/`DataManager`는 조용히 null 반환, `DontDestroy_Menu`는 null 체크조차 없음). 이제 전부 `"<타입명> instance is null!!"` 로그로 통일. 호출부 어디에서도 `Instance`를 null 체크하지 않는 것(전부 `X.Instance.메서드()` 직접 호출)을 확인했기 때문에, 어차피 NullReference가 날 자리에서 **어느 매니저가 없는지 먼저 알려주는** 개선임.
-- **중복 인스턴스 파괴 조건**: `else` → `else if (instance != this)`. 실제 중복 오브젝트 시나리오의 동작은 동일하고, Awake가 같은 인스턴스에서 두 번 돌 경우 자기 자신을 파괴하는 것만 막음.
-
-**이전 상태:** 4개 클래스가 완전히 동일한 `SingletonSetup()`(instance 체크 → `DontDestroyOnLoad` → 중복 시 `Destroy`)을 각자 복붙해서 갖고 있었고, `Instance` 게터의 null 처리 방식만 제각각이었음.
-
----
-
-## 2026-09-01 — Phase 1: 핫패스 씬 검색 제거
-
-**관련 계획:** `wiggly-scribbling-wave.md` Phase 1
-
-### 진짜 핫패스 2곳 (이번 Phase의 핵심)
-
-**1. `MagnetWorld.FixedUpdate()`의 `FindObjectsOfType<Magnet>()` — 매 물리 프레임 씬 전체 검색**
-- `Magnet`이 `OnEnable`/`OnDisable`에서 자기 자신을 `static List<Magnet>`에 등록/해제하도록 변경하고, `MagnetWorld`는 `Magnet.ActiveMagnets`를 읽도록 교체.
-- **동작 동일성**: `FindObjectsOfType<T>()`는 기본적으로 비활성 오브젝트를 제외하는데, `OnEnable`/`OnDisable` 등록은 정확히 같은 집합(활성 오브젝트만)을 만든다. 자석볼이 오브젝트 풀로 `SetActive(false)` 되며 관리되기 때문에 이 부분이 중요했음.
-
-**2. `MagnetContact.OnCollisionEnter()`의 `FindObjectOfType<GameDirector>()` — 매 충돌마다 씬 전체 검색**
-- `GameDirector`를 `Singleton<GameDirector>` 상속으로 바꾸고 `GameDirector.Instance`로 교체.
-- `GameDirector`는 GameScene에만 존재하고 씬과 함께 사라져야 하므로, `Singleton<T>`에 **`protected virtual bool IsPersistent => true`** 를 추가하고 `GameDirector`만 `false`로 override. (DontDestroyOnLoad를 걸면 안 되는 씬 종속 매니저를 같은 싱글턴 베이스로 다룰 수 있게 됨)
-- 같은 메서드 안에 있던 깨진 문자열의 `Debug.Log`도 함께 제거 — 충돌마다 문자열 결합 + 로그가 발생하던 자리라 핫패스 정리 목적에 부합. 무슨 일을 하는지는 한글 주석으로 대체.
-
-### 계획과 달라진 부분 — `[SerializeField]` 전환은 일부만 가능
-
-계획에는 나머지 `FindObjectOfType`도 전부 `[SerializeField]` 인스펙터 참조로 바꾼다고 되어 있었으나, **스크립트별 씬 배치를 GUID로 확인한 결과 대부분이 씬을 넘나드는 참조**여서 인스펙터 연결이 원천적으로 불가능했음:
+계획에는 "나머지 `FindObjectOfType`도 전부 `[SerializeField]` 인스펙터 참조로 교체"라고 적어뒀지만, **실행 전 스크립트별 씬 배치를 GUID로 조사한 결과 대부분 불가능했다.**
 
 | 스크립트 | 위치 | 찾는 대상 | 대상 위치 | 판정 |
 |---|---|---|---|---|
-| `InGameUI_Manager` | GameScene | `Character_FaceCam` | GameScene | ✅ SerializeField 전환 |
-| `AddResumeAction` | GameScene | `InGameUI_Manager` | GameScene | ✅ SerializeField 전환 |
-| `AddResumeAction` | GameScene | `ResumePanel` | **TitleScene** | ❌ 씬 간 참조 → 유지 |
-| `Result_Panel` | GameScene | `ResumePanel`, `ExitPanel` | **TitleScene** | ❌ 씬 간 참조 → 유지 |
-| `GameSettingPanel` | 프리팹 | `GameDirector` | GameScene | ❌ 프리팹은 씬 참조 불가 |
+| `InGameUI_Manager` | GameScene | `Character_FaceCam` | GameScene | ✅ 전환 |
+| `AddResumeAction` | GameScene | `InGameUI_Manager` | GameScene | ✅ 전환 |
+| `AddResumeAction` | GameScene | `ResumePanel` | **TitleScene** | ❌ 씬 간 참조 |
+| `Result_Panel` | GameScene | `ResumePanel`, `ExitPanel` | **TitleScene** | ❌ 씬 간 참조 |
+| `GameSettingPanel` | 프리팹 | `GameDirector` | GameScene | ❌ 프리팹→씬 참조 불가 |
 
-`ResumePanel`/`ExitPanel`은 TitleScene의 DontDestroyOnLoad 메뉴 캔버스에 있고 GameScene으로 넘어오는 구조라, GameScene 오브젝트의 인스펙터에서는 연결할 수 없음. 남은 4개 호출은 전부 `Start()`에서 **1회만** 실행되는 것이라 핫패스가 아니므로 그대로 두는 것이 맞다고 판단.
+`ResumePanel`/`ExitPanel`은 TitleScene의 `DontDestroyOnLoad` 캔버스에 있고 GameScene으로 넘어오는 구조라, GameScene 오브젝트의 인스펙터에서는 **연결할 수 있는 대상 자체가 존재하지 않는다.** 남은 4개 호출은 모두 `Start()`에서 1회만 실행되는 것이라 핫패스가 아니므로 그대로 두는 것이 옳다고 판단했다.
 
-`GameSettingPanel`만은 예외적으로 개선 — 이번에 `GameDirector.Instance`가 생겼으므로, Start에서 미리 찾아 캐싱하던 것을 **버튼 클릭 시점에 조회**하도록 변경. 이 패널은 DontDestroyOnLoad 캔버스에 있어 TitleScene에서 Start가 돌 때는 GameDirector가 존재하지 않는데, 기존 코드는 그때 null을 캐싱하면 이후에도 계속 null이었음. 클릭 시점 조회로 바꿔 그 타이밍 문제까지 같이 해소.
+대신 `GameSettingPanel`에서는 **계획에 없던 버그를 발견했다.** 이 패널은 `DontDestroyOnLoad` 캔버스에 있어 TitleScene에서 `Start()`가 도는데, 그 시점에는 GameDirector가 존재하지 않는다. 기존 코드는 그때 찾은 `null`을 필드에 캐싱한 뒤 **다시는 갱신하지 않았다.**
 
-### 부수 정리
-- 문자열 태그 비교 → `CompareTag()` : `GameDirector`(Board), `MagnetContact`(Magnet), `MagnetBallSpawnPoint`(Magnet 2곳)
-- `Invoke("AI_SpawnAndStartTimer", 0.5f)` → `Invoke(nameof(AI_SpawnAndStartTimer), 0.5f)`
+```csharp
+// 이전 — TitleScene에서 null을 캐싱하고 끝
+private void Setup()
+{
+    gameDirector = FindObjectOfType<GameDirector>();
+    if (gameDirector == null) { Debug.Log("gameDirector is null"); }
+}
 
-**검증:** `dotnet build` — 우리 코드 오류/경고 0건.
-
-**⚠️ 에디터에서 연결해야 하는 인스펙터 필드 (GameScene, 아직 미완료):**
-- `InGameUI_Manager`의 `faceCam` → 씬의 `Character_FaceCam` 오브젝트
-- `AddResumeAction`의 `inGameUI_Manager` → 씬의 `InGameUI_Manager` 오브젝트
-
-두 필드는 연결하지 않으면 **런타임에 NullReference가 발생**하므로, 다음에 에디터를 열 때 반드시 채워야 함.
-
----
-
-## 2026-09-01 — 메뉴 버튼 먹통 수정 (Phase 0 후속 — 놓친 바인딩 4곳)
-
-**증상:** 플레이 시 콘솔 에러는 없는데 옵션 버튼을 눌러도 옵션창이 안 열리고, 인게임 멈춤(Resume) 버튼도 반응 없음.
-
-**원인:** Phase 0에서 메서드명을 `Show()`/`Hide()`로 통일했는데, 씬·프리팹에 저장된 버튼 OnClick 바인딩은 **옛 메서드명 문자열 그대로** 남아 있었음. UnityEvent는 대상 메서드가 없으면 **에러 없이 조용히 아무것도 하지 않기 때문에** 콘솔이 깨끗한 채로 버튼만 죽는 형태로 나타남.
-
-**Phase 0 체크리스트가 불완전했던 이유:** 당시 `.unity` 씬 파일만, 그것도 `m_MethodName:` 형식만 검색했음. 실제로는 두 가지를 더 봤어야 했음 —
-1. **`.prefab` 파일** (`OptionPanel.prefab`, `Tablet_UI.prefab`에 바인딩이 있었음)
-2. **프리팹 오버라이드 직렬화 형식** (`propertyPath: ...m_MethodName` / `value: <메서드명>`)
-
-그 결과 6곳이라고 했던 것이 실제로는 **10곳**이었음. 특히 "재바인딩 불필요"라고 단정했던 `OptionPanel.HidePanel`이 `OptionPanel.prefab`에 실제로 바인딩되어 있었음.
-
-**수정한 바인딩 10곳** (인스펙터에서 10개를 일일이 찾는 것보다 정확해서 파일의 해당 줄을 직접 수정):
-
-| 파일 | 줄 | 이전 | 이후 |
-|---|---|---|---|
-| TitleScene.unity | 697, 965 | `OnClickExitButton` | `Show` |
-| TitleScene.unity | 26638 | `OnClickExit_no_Button` | `Hide` |
-| TitleScene.unity | 25994 | `OnClickResumeButton` | `Show` |
-| TitleScene.unity | 25531 | `OnClickContinueButton` | `Hide` |
-| TitleScene.unity | 30534 | `ShowPanel` | `Show` |
-| TitleScene.unity | 4645 | `value: HidePanel` | `Hide` |
-| OptionPanel.prefab | 2089 | `HidePanel` | `Hide` |
-| Tablet_UI.prefab | 560, 565 | `HidePanel`, `ShowPanel` | `Hide`, `Show` |
-
-**함께 확인한 것 (문제 없음):** `MenuList`가 `GetComponentsInChildren<MenuButtonBase>` → `<UIPanel>`로 바뀌면서 패널까지 잡히는 회귀를 의심했으나, MenuList GameObject의 자식은 Exit/Option/Resume/List 버튼 4개뿐이라 이전과 동일한 집합임을 확인.
-
-**교훈 (재확인):** Unity에서 public 메서드명을 바꾸거나 지울 때는 반드시 **`.unity` + `.prefab` 양쪽**을, **`m_MethodName:` 와 `value:` 두 형식 모두** 검색할 것. 컴파일러도 콘솔도 잡아주지 않는 유일한 부류의 참조임.
+// 이후 — 실제로 필요한 클릭 시점에 조회
+public void OnClickGamePlayButton_GameScene()
+{
+    GameDirector director = GameDirector.Instance;
+    if (director != null) { director.Setup(); }
+    else { Debug.Log("GameDirector is null!"); }
+}
+```
 
 ---
 
-## 2026-09-01 — Phase 3: GameManager 캡슐화
+## Phase 2 — 제네릭 싱글턴 베이스로 통합
 
-**관련 계획:** `wiggly-scribbling-wave.md` Phase 3
+### ① 문제 상황
 
-**작업 내용:**
-- `GameManager.gameSetting`을 `public` 필드에서 **`[SerializeField] private` 필드 + 읽기 전용 프로퍼티 `CurrentSetting`** 으로 변경. 값 변경은 명시적 메서드로만:
-  `SetGameMode()`, `SetPieceCount()`, `SetPieceCount_AI()`, `SetWaitingTime()`, `SetMaxTurn()`
-- `[SerializeField]`를 유지한 이유: 기존에 `public` 필드로 Unity가 직렬화하던 값이라, 그냥 private으로만 바꾸면 씬에 저장돼 있던 값이 사라지고 씬이 dirty 처리됨. 필드명이 그대로라 직렬화 데이터는 그대로 매핑됨.
-- **struct라서 얻는 이득**: `GameSetting`이 struct이므로 `CurrentSetting`은 복사본을 돌려줌. 따라서 `GameManager.Instance.CurrentSetting.pieceCount = 5` 같은 코드는 **컴파일 에러(CS1612)** 가 됨 — 캡슐화가 규칙이 아니라 컴파일러로 강제됨.
-- 외부 변경 지점 9곳을 전부 setter 호출로 교체:
-  - `AIBattleMode`, `OfflineMultiMode`, `OnlineBattleMode` → `SetGameMode(...)`
-  - `GameSettingMenu`의 드롭다운 핸들러 4개 + `SetDefaultSetting()`
-- 외부 읽기 지점 6곳을 `CurrentSetting`으로 교체: `MagnetContact`, `GameSettingPanel`, `InGameUI_Manager`(2곳), `Player_Panel`, `GameDirector`
-- `GameManager.DefaultGameSetting()` 정리: 반환값을 아무도 쓰지 않아 `public GameSetting` → `private void`로, 의미 없는 중첩 중괄호 제거하고 객체 초기화 구문으로 변경.
-- `GameDirector`의 `private GameSetting GameSetting { get; set; }` → `private GameSetting currentSetting;` 로 개명. **프로퍼티명이 타입명과 완전히 같아서** 코드를 읽을 때 타입인지 값인지 구분이 안 되던 문제 해소.
-- `GameDirector.Initialize_GameSettings()`의 복사 지점에 주석 추가 — struct 복사라 **판 시작 시점의 설정으로 끝까지 진행**되고, 도중에 GameManager 설정이 바뀌어도 진행 중인 판에는 반영되지 않는다는 점을 명시.
+싱글턴 4개(`GameManager`, `DataManager`, `SoundManager`, `DontDestroy_Menu`)가 **완전히 동일한 보일러플레이트를 각자 복사해서** 갖고 있었다. 게다가 `Instance` 게터의 null 처리 방식만 클래스마다 제각각이라, 어떤 매니저가 없을 때 어떤 클래스는 조용히 null을 반환하고 어떤 클래스는 로그를 남기는 등 진단 정보가 일관되지 않았다.
 
-**바인딩 안전성 확인 (Phase 0 교훈 적용):** `GameSettingMenu`의 `SetPieceCount`/`SetPieceCount_AI`/`SetWaitingTime`/`SetMaxTurn` 4개는 `GameSettingPanel.prefab`, `Tablet_UI.prefab`, `GameScene.unity` **3곳씩** 드롭다운 이벤트에 바인딩되어 있음을 사전 확인 → **메서드명을 바꾸지 않고 본문만** 교체. `SetDefaultSetting`, `DefaultGameSetting`, `DefaultGameOption`은 바인딩이 없어 자유롭게 변경 가능함도 확인.
+### ② 이전 코드
 
-**이전 상태:** `public GameSetting gameSetting;` 이 그대로 노출되어 있어 설정 패널·모드 버튼·UI 등 아무 데서나 `GameManager.Instance.gameSetting.pieceCount = ...` 식으로 직접 필드를 찔러 쓸 수 있었음. 어디서 설정이 바뀌는지 추적이 불가능했음.
+같은 코드가 4개 파일에 반복됐다.
 
-**검증:** `dotnet build` — 우리 코드 오류/경고 0건. 외부에서 `.gameSetting` 직접 접근이 0건임도 확인.
+```csharp
+// SoundManager.cs — 로그를 남기는 버전
+private static SoundManager instance;
+public static SoundManager Instance
+{
+    get
+    {
+        if (instance == null) { Debug.Log("Sound Manager instance is null!!"); return null; }
+        return instance;
+    }
+}
+private void Awake() { SingletonSetup(); }
+private void SingletonSetup()
+{
+    if (instance == null) { instance = this; DontDestroyOnLoad(this.gameObject); }
+    else { Destroy(this.gameObject); }
+}
+```
 
-**에디터 작업:** 없음 (메서드명 변경이 없어 재바인딩 불필요).
+```csharp
+// GameManager.cs / DataManager.cs — 조용히 null을 반환하는 버전
+private static GameManager instance = null;
+public static GameManager Instance
+{
+    get { if (instance == null) { return null; } return instance; }
+}
+// SingletonSetup()은 위와 완전히 동일 ...
+
+// DontDestroy_Menu.cs — null 체크조차 없는 버전
+public static DontDestroy_Menu Instance { get { return instance; } }
+```
+
+### ③ 변경 후 코드
+
+```csharp
+public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>
+{
+    private static T instance;
+
+    public static T Instance
+    {
+        get
+        {
+            if (instance == null) { Debug.Log(typeof(T).Name + " instance is null!!"); }
+            return instance;
+        }
+    }
+
+    /// <summary>씬이 바뀌어도 유지할지 여부. 씬에 종속된 매니저는 false로 override.</summary>
+    protected virtual bool IsPersistent => true;
+
+    protected virtual void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this as T;
+            if (IsPersistent) { DontDestroyOnLoad(this.gameObject); }
+        }
+        else if (instance != this) { Destroy(this.gameObject); }
+    }
+}
+```
+
+```csharp
+public sealed class GameManager      : Singleton<GameManager> { /* 싱글턴 코드 0줄 */ }
+public sealed class SoundManager     : Singleton<SoundManager> { /* 0줄 */ }
+public sealed class DontDestroy_Menu : Singleton<DontDestroy_Menu> { /* 0줄 */ }
+
+public sealed class DataManager : Singleton<DataManager>
+{
+    protected override void Awake()   // Awake에 추가 작업이 있는 유일한 케이스
+    {
+        base.Awake();
+        LoadGameOptionData();
+    }
+}
+```
+
+### ④ 판단 근거
+
+**제약을 `where T : MonoBehaviour`가 아니라 `where T : Singleton<T>`(CRTP)로 둔 이유:** 전자를 쓰면 `class Foo : Singleton<Bar>` 같은 실수가 컴파일을 통과하고, 런타임에 `Foo.Instance`가 영원히 null인 형태로 터진다. 원인 추적이 매우 어려운 부류의 버그다. CRTP 제약은 이걸 컴파일 단계에서 막는다.
+
+**셋업을 `protected virtual void Awake()`에 둔 이유:** Unity에서 가장 흔한 함정이 파생 클래스가 무심코 `private void Awake()`를 정의해 베이스의 `Awake`를 가려버리고, 그 결과 **싱글턴이 조용히 초기화되지 않는** 것이다. `virtual`로 두면 그 상황에서 컴파일러가 "상속된 멤버를 숨깁니다" 경고를 내준다. 완벽한 방어는 아니지만, 아무 신호도 없는 것보다 훨씬 낫다.
+
+**`Instance` null 로그를 통일한 근거:** 먼저 호출부를 전수 조사해 `Instance`를 null 체크하는 코드가 **한 곳도 없음**을 확인했다(전부 `X.Instance.메서드()` 직접 호출). 즉 어차피 NullReference가 날 자리이므로, 그 직전에 **어느 매니저가 없는지 이름과 함께** 알려주는 편이 진단에 유리하다고 판단했다.
+
+### ⑤ 결과
+
+- 싱글턴 보일러플레이트가 **4곳 → 1곳**. 이후 새 매니저는 `: Singleton<T>` 한 줄로 끝난다.
+- `Instance`가 null일 때 **타입명이 찍히는 로그로 통일** — 기존에는 3가지 방식이 섞여 있었다.
+- 중복 파괴 조건을 `else` → `else if (instance != this)`로 보강해, 같은 인스턴스에서 `Awake`가 두 번 도는 엣지 케이스에 자기 자신을 파괴하지 않도록 했다.
+- 이 베이스에 추가한 `IsPersistent` 훅 덕분에, 씬에 종속된 `GameDirector`(Phase 1)도 **같은 싱글턴 메커니즘 하나로** 다룰 수 있게 됐다.
+
+---
+
+## Phase 3 — GameManager 캡슐화
+
+### ① 문제 상황
+
+게임 설정이 `public` 필드로 그대로 노출되어 있어, 설정 패널·모드 버튼·인게임 UI 등 **아무 데서나 직접 필드를 찔러 쓸 수 있었다.** 설정이 언제 어디서 바뀌는지 추적이 불가능했다.
+
+### ② 이전 코드
+
+```csharp
+// GameManager.cs
+public GameSetting gameSetting;   // ← 완전 노출
+
+public GameSetting DefaultGameSetting()
+{
+    {                                    // ← 의미 없는 중첩 블록
+        gameSetting = new GameSetting();
+        gameSetting.gameMode = GameMode.OfflineMulti;
+        gameSetting.pieceCount = 20;
+        gameSetting.maxTurn = 20;
+        gameSetting.waitingTime = 1f;
+        return gameSetting;              // ← 반환값을 아무도 쓰지 않음
+    }
+}
+```
+
+```csharp
+// 호출부 — 9곳에서 필드를 직접 수정
+GameManager.Instance.gameSetting.gameMode = GameMode.AI;          // AIBattleMode
+GameManager.Instance.gameSetting.pieceCount = option_value;       // GameSettingMenu
+GameManager.Instance.gameSetting.maxTurn = 20;                    // GameSettingMenu
+```
+
+```csharp
+// GameDirector.cs — 프로퍼티명이 타입명과 완전히 동일
+private GameSetting GameSetting { get; set; }
+...
+if (GameSetting.gameMode == GameMode.AI)   // 타입인지 값인지 읽어서 구분이 안 됨
+```
+
+### ③ 변경 후 코드
+
+```csharp
+// GameManager.cs
+[SerializeField]
+private GameSetting gameSetting;
+
+/// <summary>
+/// 현재 게임 설정(읽기 전용). GameSetting은 struct라 이 프로퍼티는 복사본을 돌려주므로,
+/// 값을 바꾸려면 반드시 아래 Set 메서드들을 거쳐야 한다.
+/// </summary>
+public GameSetting CurrentSetting => gameSetting;
+
+public void SetGameMode(GameMode mode)     => gameSetting.gameMode = mode;
+public void SetPieceCount(int count)       => gameSetting.pieceCount = count;
+public void SetPieceCount_AI(int count)    => gameSetting.pieceCount_AI = count;
+public void SetWaitingTime(float seconds)  => gameSetting.waitingTime = seconds;
+public void SetMaxTurn(int turn)           => gameSetting.maxTurn = turn;
+
+private void DefaultGameSetting()
+{
+    gameSetting = new GameSetting
+    {
+        gameMode = GameMode.OfflineMulti,
+        pieceCount = 20,
+        maxTurn = 20,
+        waitingTime = 1f,
+    };
+}
+```
+
+```csharp
+// 호출부
+GameManager.Instance.SetGameMode(GameMode.AI);
+GameManager.Instance.SetPieceCount(option_value);
+```
+
+```csharp
+// GameDirector.cs
+private GameSetting currentSetting;
+...
+// GameSetting은 struct라 여기서 값이 복사된다. 즉 이 시점 이후 GameManager 쪽 설정이
+// 바뀌어도 진행 중인 판에는 반영되지 않는다(판 시작 시점의 설정으로 끝까지 진행).
+currentSetting = GameManager.Instance.CurrentSetting;
+```
+
+### ④ 판단 근거
+
+**struct라는 점이 이 설계의 핵심이다.** `GameSetting`이 struct이므로 `CurrentSetting` 프로퍼티는 **복사본**을 돌려준다. 따라서
+
+```csharp
+GameManager.Instance.CurrentSetting.pieceCount = 5;   // 컴파일 에러 CS1612
+```
+
+가 된다. 캡슐화가 "팀 규칙"이 아니라 **컴파일러가 강제하는 구조**가 되는 것이다. 클래스였다면 프로퍼티로 감싸도 내부 필드를 얼마든지 바꿀 수 있었다.
+
+**`[SerializeField]`를 유지한 이유:** 기존에 `public` 필드라 Unity가 직렬화하고 있었다. 그냥 private으로만 바꾸면 직렬화가 끊겨 씬에 저장돼 있던 값이 사라지고 씬이 dirty 처리된다. 필드명을 그대로 두고 `[SerializeField]`를 붙이면 **기존 직렬화 데이터가 그대로 매핑**된다.
+
+**`GameDirector`의 프로퍼티명을 바꾼 이유:** `private GameSetting GameSetting { get; set; }` 는 타입명과 프로퍼티명이 같아, 코드를 읽을 때 `GameSetting.gameMode`가 정적 멤버 접근인지 인스턴스 값 접근인지 구분되지 않았다. `currentSetting`으로 바꿔 해소했다.
+
+### ⑤ 결과
+
+- 외부에서 `.gameSetting`에 접근하는 코드 **0건** (전수 확인)
+- 설정 변경 경로가 5개 메서드로 좁혀져, "언제 무엇이 바뀌는지" 추적 가능
+- struct 복사 시점을 주석으로 명시해, **판 진행 중 설정 변경이 반영되지 않는 것이 의도된 동작**임을 코드에 남김
+- `DefaultGameSetting()`의 죽은 반환값과 중첩 블록 정리
+
+### ⑥ 계획 대비 달라진 점
+
+작업 전 `GameSettingMenu`의 setter 4개(`SetPieceCount`, `SetPieceCount_AI`, `SetWaitingTime`, `SetMaxTurn`)가 **`GameSettingPanel.prefab`, `Tablet_UI.prefab`, `GameScene.unity` 3곳씩** 드롭다운 이벤트에 바인딩돼 있음을 확인했다. 그래서 **메서드명은 건드리지 않고 본문만** 교체하는 방식을 택했고, 그 결과 이 Phase는 **에디터 재바인딩 작업이 0건**이다. (이 확인 습관은 아래 Phase 0에서 크게 데인 뒤 생겼다.)
+
+---
+
+## Phase 0 — UI 패널 구조 통합
+
+### ① 문제 상황
+
+"패널을 보이기/숨기기"라는 **하나의 개념이 세 갈래로 흩어져** 있었다. 새 패널을 추가할 때 어떤 규칙을 따라야 하는지 알 수 없는 상태였다.
+
+1. `Panel_Base` — `ShowPanel()`/`HidePanel()`, 타이틀 메뉴 3개 패널이 사용
+2. `MenuButtonBase` — `Show()`/`Hide()`, 하단 내비게이션 버튼 전용
+3. 나머지는 **클래스마다 제각각인 이름** — `OnClickResumeButton`, `OnClickExitButton`, `OnClickExit_no_Button`...
+4. `Result_Panel`은 아예 표시/숨김 메서드가 없어 **호출부가 `SetActive`를 직접** 건드렸다
+
+### ② 이전 코드
+
+```csharp
+// 베이스가 두 개, 시그니처도 다름
+public class Panel_Base : MonoBehaviour
+{
+    public E_UI_Panel_Name panel_Name;
+    public virtual void ShowPanel() { }
+    public virtual void HidePanel() { }
+}
+
+public class MenuButtonBase : MonoBehaviour
+{
+    public virtual void Show() { }
+    public virtual void Hide() { }
+}
+```
+
+```csharp
+// 같은 일을 하는데 이름이 전부 다름
+public class OptionPanel : MonoBehaviour          // 어느 베이스도 상속 안 함
+{
+    public void ShowPanel() { gameObject.SetActive(true); }
+    public void HidePanel() { gameObject.SetActive(false); }
+}
+
+public class ResumePanel : MonoBehaviour
+{
+    public void OnClickResumeButton()   { resumePanel.SetActive(true); }   // = Show
+    public void OnClickContinueButton() { resumePanel.SetActive(false); }  // = Hide
+}
+
+public class ExitPanel : MonoBehaviour
+{
+    public void OnClickExitButton()      { exitPanel.SetActive(true); }    // = Show
+    public void OnClickExit_no_Button()  { exitPanel.SetActive(false); }   // = Hide
+}
+```
+
+```csharp
+// GameDirector.cs — Result_Panel은 호출부가 직접 SetActive
+result_Panel.gameObject.SetActive(true);
+```
+
+### ③ 변경 후 코드
+
+```csharp
+public class UIPanel : MonoBehaviour
+{
+    public virtual void Show() => gameObject.SetActive(true);
+    public virtual void Hide() => gameObject.SetActive(false);
+}
+```
+
+```csharp
+public class Panel_Base : UIPanel          // Show/Hide는 상속받고 태그만 추가
+{
+    public E_UI_Panel_Name panel_Name;
+}
+
+public sealed class OptionPanel : UIPanel
+{
+    public override void Show() { gameObject.SetActive(true); }
+    public override void Hide() { gameObject.SetActive(false); }
+}
+
+public sealed class ResumePanel : UIPanel
+{
+    public override void Show() { resumePanel.SetActive(true); }
+    public override void Hide() { resumePanel.SetActive(false); }
+}
+
+public sealed class ExitButton : UIPanel { }        // 기본 동작으로 충분 → 본문 0줄
+```
+
+```csharp
+// GameDirector.cs — 이제 다형적 호출
+result_Panel.Show();
+```
+
+`MenuButtonBase`는 삭제하고 상속하던 버튼 4개를 `UIPanel`로 옮겼다. `MenuList`의 컬렉션 타입도 `List<MenuButtonBase>` → `List<UIPanel>`로 교체했다.
+
+### ④ 판단 근거
+
+`ExitButton`/`OptionButton`은 override 내용이 새 베이스의 기본 동작과 **완전히 동일**해서 override 자체를 지웠다. 반면 `ListButton`은 `Show()`/`Hide()`가 **빈 메서드**였는데, 이건 "리스트 토글 버튼 자신은 다른 버튼들과 함께 꺼지면 안 된다"는 **의도된 동작**이었다. 여기서 override를 지웠다면 기본 `SetActive`가 동작해 토글 버튼이 사라졌을 것이므로, 빈 override를 그대로 유지했다. **"같아 보이는 코드"와 "의도적으로 비어 있는 코드"를 구분하는 것이 이 작업의 실제 난이도였다.**
+
+`ResumePanel`의 `OnClickReplayButton`/`OnClickSelectModeButton`처럼 표시/숨김이 아닌 **고유 동작** 메서드는 이름을 유지했다. 통일의 대상은 "보이기/숨기기"라는 개념이지, 모든 메서드가 아니다.
+
+### ⑤ 결과
+
+- 표시/숨김 API가 **3갈래 → 1개(`UIPanel.Show/Hide`)** 로 통일
+- 베이스 클래스 2개 → 1개 (`MenuButtonBase` 삭제)
+- `Result_Panel`도 다형성 체계에 편입, 호출부의 `SetActive` 직접 조작 제거
+
+### ⑥ 계획 대비 달라진 점 — 두 가지 중요한 발견
+
+**(1) "비대칭 버그"로 판단했던 것이 사실은 의도된 연출이었다.**
+
+`Menu_Manager`의 세 전환 메서드 중 `Change_Start_to_ModeSelect()`만 공통 `ChangePanel()`을 거치지 않아, 처음엔 이걸 일관성 버그로 보고 계획에 "수정" 항목으로 넣었다. 그런데 구현 중 호출 경로를 추적해보니 다음 연출이었다.
+
+```
+StartPanel.Hide()  →  카메라 페이드아웃 + "MoveStart" 애니메이션 트리거
+                   →  애니메이션 클립의 Animation Event
+                   →  Camera_Animation_Event.Loading_UI_Show()
+                   →  Tablet_Logic: 로딩 스피너 표시 → 1.5초 대기
+                   →  ModeSelectPanel.Show()
+```
+
+즉 ModeSelect 패널은 **일부러 1.5초 뒤에** 나타나야 했다. 계획대로 `ChangePanel()`을 태웠다면 패널이 즉시 떠서 로딩 연출이 통째로 깨졌을 것이다. **전환 흐름은 그대로 두고 메서드명만 통일**하는 것으로 계획을 수정했다.
+
+**(2) UnityEvent 바인딩을 놓쳐 실제로 버튼이 먹통이 됐다. → 아래 별도 항목**
+
+---
+
+## 사고 기록 — 메뉴 버튼 먹통 (Phase 0의 대가)
+
+### ① 증상
+
+Phase 0 이후 플레이 테스트에서 **콘솔 에러가 하나도 없는데** 옵션 버튼을 눌러도 옵션창이 열리지 않고, 인게임 일시정지 버튼도 반응하지 않았다.
+
+### ② 원인
+
+Unity의 `UnityEvent`(버튼 OnClick)는 대상 메서드를 **문자열로** 참조한다. Phase 0에서 메서드명을 `Show`/`Hide`로 바꿨지만 씬·프리팹에 저장된 문자열은 옛 이름 그대로였고, **대상 메서드가 없으면 UnityEvent는 예외 없이 조용히 아무것도 하지 않는다.** 컴파일러도 런타임도 잡아주지 않는 유일한 부류의 참조다.
+
+```yaml
+# TitleScene.unity — 코드에는 더 이상 존재하지 않는 메서드를 가리키고 있었다
+- m_Target: {fileID: 1401899690}
+  m_TargetAssemblyTypeName: ResumePanel, Assembly-CSharp
+  m_MethodName: OnClickResumeButton      # 실제 코드: Show()
+```
+
+### ③ 조치
+
+씬·프리팹의 해당 줄을 직접 수정했다(인스펙터에서 10곳을 찾는 것보다 정확하다).
+
+| 파일 | 이전 | 이후 |
+|---|---|---|
+| TitleScene.unity (2곳) | `OnClickExitButton` | `Show` |
+| TitleScene.unity | `OnClickExit_no_Button` | `Hide` |
+| TitleScene.unity | `OnClickResumeButton` | `Show` |
+| TitleScene.unity | `OnClickContinueButton` | `Hide` |
+| TitleScene.unity | `ShowPanel` | `Show` |
+| TitleScene.unity | `value: HidePanel` | `Hide` |
+| OptionPanel.prefab | `HidePanel` | `Hide` |
+| Tablet_UI.prefab (2곳) | `HidePanel`, `ShowPanel` | `Hide`, `Show` |
+
+### ④ 왜 놓쳤는가 — 이게 이 항목의 핵심
+
+Phase 0 당시 나는 **"재바인딩 필요한 곳은 6곳"** 이라고 정리했고, `OptionPanel.HidePanel`은 **"코드에서만 호출되므로 불필요"** 라고 단정했다. 둘 다 틀렸다. 실제로는 10곳이었다.
+
+검색 범위에 두 가지가 빠져 있었다.
+
+1. **`.prefab` 파일** — `.unity` 씬만 검색했다. 정작 `OptionPanel.prefab`에 바인딩이 있었다.
+2. **프리팹 오버라이드 직렬화 형식** — 일반 형식은 `m_MethodName: X`지만, 프리팹 인스턴스의 오버라이드는 `propertyPath: ...m_MethodName` / `value: X` 형태로 저장된다. 완전히 다른 문자열이라 기존 검색 패턴에 걸리지 않았다.
+
+사실 이 프로젝트에서 **같은 함정에 두 번 걸렸다.** 앞서 `Menu_Manager.All_HidePanel()`을 죽은 코드로 판단해 삭제하려다, 삭제 직전 재확인에서 GameScene의 오버라이드 형식 바인딩을 발견해 취소한 적이 있다. 그 교훈을 정작 Phase 0 체크리스트에는 적용하지 못했다.
+
+### ⑤ 이후 적용한 규칙
+
+Unity에서 public 메서드명을 바꾸거나 지우기 전에는 **반드시** 아래를 모두 검색한다.
+
+```bash
+grep -rn -E "(m_MethodName|value): <메서드명>$" Assets --include=*.unity --include=*.prefab
+```
+
+그리고 **가능하면 이름을 바꾸지 않고 본문만 교체한다.** Phase 3에서 `GameSettingMenu`의 드롭다운 핸들러 4개를 이 방식으로 처리해 재바인딩 0건으로 끝냈다.
+
+---
+
+## Phase 0.5 — 스크립트 폴더 구조 재편
+
+### ① 문제 상황
+
+폴더 분류에 **두 가지 기준이 한 depth에 섞여** 있었고, 폴더명 표기도 제각각(`Title Scene` / `GameScene` / `Camera Move` / `Canvas_Menu`)이었다. 새 스크립트를 어디에 둬야 할지 판단할 규칙이 없었다.
+
+### ② 이전 구조
+
+```
+Assets/Scripts/
+  AllScene/                    # 씬 기준 + 싱글턴과 UI가 뒤섞임
+    GameManager.cs, DataManager.cs, SoundManager.cs, GameSetting.cs, OptionData.cs
+    Menu List/, Exit Panel/, Help Panel/, Option Panel/
+  GameScene/                   # 씬 기준
+    Camera Move/, Game System/, Magnet System/, MemoryPool/, Player/, UI/
+  Title Scene/                 # 씬 기준 (공백 포함)
+    Camera/
+    Canvas_Menu/               # 3단 중첩
+      Start Panel/, Mode Select Panel/, Game Setting Panel/
+    FadeEffect_UI.cs           # 실제로는 GameScene에서도 쓰는 공용 유틸인데 여기 있음
+```
+
+### ③ 변경 후 구조
+
+```
+Assets/Scripts/
+  Core/       # 앱 전역 싱글턴·데이터 (GameManager, DataManager, SoundManager, DontDestroy_Menu, Singleton, GameSetting, OptionData)
+  UI/         # 씬 공용 UI 프레임워크·상시 패널 (UIPanel, FadeEffect_UI, MenuBar/MenuList/버튼류, ExitPanel, HelpPanel, OptionPanel)
+  MainMenu/   # 타이틀 메뉴 흐름 전체 (14개)
+  Match/      # 인게임 대전 진행 + HUD + 인게임 카메라 (10개)
+  Magnet/     # 자석 물리 시스템 (7개)
+  AI/         # AI_FSM
+```
+
+추가로 전체 49개 스크립트에 **폴더와 1:1 대응하는 namespace**(`Assets.Scripts.<폴더명>`)를 부여했다.
+
+### ④ 판단 근거
+
+처음에는 기존 구조를 존중해 **씬 기준**(`TitleScene/`, `GameScene/`)으로 재편했다. 그러나 이 프로젝트는 씬이 2개뿐이고, 카메라 스크립트처럼 **두 씬에 각각 존재하지만 본질적으로 같은 역할**을 하는 코드가 서로 다른 폴더로 갈라지는 문제가 있었다. "어느 씬 소속인가"보다 "무슨 시스템인가"가 코드를 찾는 실제 기준이라고 판단해 **기능 기준으로 다시 재편**했다.
+
+**모든 이동은 `git mv`로 `.cs`와 `.cs.meta`를 반드시 함께 옮겼다.** Unity는 스크립트를 `.meta`의 GUID로 참조하므로, `.meta`가 함께 가지 않으면 **씬·프리팹에 붙어 있던 모든 컴포넌트 연결이 끊긴다.** 폴더 자체의 `.meta`는 컴포넌트 참조와 무관하므로 재생성되도록 두었다.
+
+### ⑤ 결과
+
+- 최상위 폴더 **6개**, 전부 "기능" 하나의 기준으로 통일. 공백 포함 폴더명 제거.
+- namespace가 폴더와 1:1 대응해 파일 위치와 논리적 소속이 일치
+- 컴포넌트 참조 손실 **0건** (GUID 보존 확인)
+
+### ⑥ 계획 대비 달라진 점
+
+**namespace 도입 과정에서 이름 충돌이 발생했다.** `Camera/` 폴더의 `Character_FaceCam.cs`가 `UnityEngine.Camera` 타입을 필드로 쓰는데, 파일이 `namespace Assets.Scripts.Camera`에 들어가면서 `Camera`가 자기 네임스페이스명과 겹쳐 모호해졌다. 당시엔 `UnityEngine.Camera`로 풀네임 처리해 우회했다.
+
+이후 폴더 구조 적정성을 재검토하면서 **`Camera/` 폴더 자체를 해체**해 근본 원인을 없앴다. 세 파일의 실제 사용처를 조사한 결과:
+
+| 파일 | 실제 정체 | 유일한 사용처 |
+|---|---|---|
+| `CameraView.cs` | 인게임 쿼터뷰↔탑뷰 전환 | `GameDirector` (Match) |
+| `Character_FaceCam.cs` | 이름과 달리 **플레이어 패널 초상화용** = HUD 부속 | `InGameUI_Manager` (Match) |
+| `CameraMoving.cs` | `Start`/`Update`가 빈 껍데기 | **없음 (죽은 코드)** |
+
+하나의 "카메라 시스템"이 아니라 이름만 보고 묶인 상태였다. 앞의 둘을 `Match/`로 옮기고 `CameraMoving.cs`는 삭제했다. 그 결과 우회용으로 넣었던 `UnityEngine.Camera` 풀네임도 평범한 `Camera`로 되돌릴 수 있었다. **폴더 구조 문제를 고치니 코드 문제가 함께 사라진 사례다.**
+
+같이 발견한 죽은 코드 `GameOption.cs`(해상도 옵션을 만들다 만 스텁, 참조 0건)도 삭제했다. 삭제 전 코드 참조와 씬·프리팹 GUID 참조가 모두 0건임을 확인했다.
+
+---
+
+## 사전 작업 — Unity 6 이식 및 스크립트 인코딩 정리
+
+### ① 문제 상황
+
+프로젝트를 다시 열었을 때 모든 `.cs` 파일의 한글 주석이 깨져 보였다. 파일이 **CP949(EUC-KR)로 저장**되어 있었기 때문이다. 당시 한국어 Windows 환경의 Visual Studio가 시스템 기본 코드페이지로 저장하면서 생긴 문제로, UTF-8을 기대하는 현대 에디터(VS Code, Rider)에서는 전부 깨진다.
+
+```csharp
+// 실제로 이렇게 보였다
+private List<Player> playerList = new List<Player>();   // ���� ���� �� �÷��̾� ����
+```
+
+### ② 조치
+
+- Unity 2022.3 → 6000.5.3f1 업그레이드 (URP 17.5, TextMeshPro 등 재직렬화)
+- 49개 스크립트를 CP949 → UTF-8로 변환. 어차피 전체 코드를 다시 볼 예정이었으므로 **기존 주석은 제거**하고, 이후 리팩토링 과정에서 "왜"를 설명하는 주석만 선별적으로 다시 넣기로 했다.
+
+### ③ 결과
+
+- 모든 스크립트가 UTF-8 (또는 순수 ASCII)로 정규화되어 인코딩 문제 재발 없음
+- 이후 모든 리팩토링 작업의 깨끗한 출발점(`ae059ef`) 확보
+
+---
+
+## 이 프로젝트에서 얻은 교훈
+
+**1. Unity의 문자열 참조는 컴파일러가 지켜주지 않는다.**
+`UnityEvent`(버튼 OnClick, 드롭다운), Animation Event, `Invoke("메서드명")`은 모두 메서드를 문자열로 참조한다. 이름을 바꾸면 **에러 없이 조용히 죽는다.** 이 프로젝트에서 두 번 데였고, 결국 "이름을 바꾸지 않고 본문만 교체"를 기본 전략으로 삼게 됐다.
+
+**2. 성능 최적화에서 동작이 바뀌면 그건 버그다.**
+`FindObjectsOfType`을 자기등록 리스트로 바꿀 때, 이 API가 비활성 오브젝트를 제외한다는 점을 놓쳤다면 오브젝트 풀에서 잠자는 자석까지 물리 계산에 포함됐을 것이다. `OnEnable`/`OnDisable` 시점을 고른 것은 성능이 아니라 **동일성**을 위한 선택이었다.
+
+**3. 계획은 실행하면서 검증해야 한다.**
+"비대칭 구조 = 버그"라고 계획에 적었지만 실제로는 Animation Event로 짜인 의도된 연출이었고, "SerializeField로 교체"라고 적었지만 대부분 씬 간 참조라 불가능했다. **계획 대비 무엇이 왜 달라졌는지를 남기는 것**이 계획 자체보다 가치 있었다.
+
+**4. 구조를 고치면 코드 문제가 따라서 사라진다.**
+`Camera/` 폴더를 해체하자 namespace 충돌 우회 코드가 필요 없어졌고, 죽은 코드도 함께 드러났다. 응집도가 낮은 묶음은 그 자체로 여러 증상의 원인이었다.
+
+---
+
+## 2026-09-03 — MyAssets 폴더 재편에 따른 namespace 갱신
+
+### ① 문제 상황
+
+외부 에셋과 직접 만든 에셋이 `Assets/` 최상위에 뒤섞여 있어 관리가 어려웠다. 사용자가 Unity 에디터에서 직접 `Assets/MyAssets/`를 만들고 자체 제작 에셋(Scripts 포함)을 그 아래로 옮겼다. 그 결과 `Scripts/`의 실제 경로가 `Assets/Scripts/` → `Assets/MyAssets/Scripts/`로 바뀌었는데, Phase 0.5에서 폴더 기준으로 부여한 namespace(`Assets.Scripts.<폴더명>`)는 파일 위치와 어긋난 채로 남아 있었다.
+
+### ② 이전 코드
+
+```csharp
+// Assets/MyAssets/Scripts/Core/GameManager.cs
+using Assets.Scripts.UI;
+
+namespace Assets.Scripts.Core
+{
+    public sealed class GameManager : Singleton<GameManager> { ... }
+}
+```
+
+### ③ 변경 후 코드
+
+```csharp
+// Assets/MyAssets/Scripts/Core/GameManager.cs
+using Assets.MyAssets.Scripts.UI;
+
+namespace Assets.MyAssets.Scripts.Core
+{
+    public sealed class GameManager : Singleton<GameManager> { ... }
+}
+```
+
+50개 파일 전체의 `namespace Assets.Scripts.*` → `namespace Assets.MyAssets.Scripts.*`, `using Assets.Scripts.*` → `using Assets.MyAssets.Scripts.*`를 일괄 치환했다.
+
+### ④ 판단 근거
+
+작업 전 본문 코드에서 `Assets.Scripts.X.Y` 같은 완전정규화(FQN) 참조를 쓰는 곳이 있는지 먼저 확인했다 — 없었다. 모든 참조가 `namespace` 선언과 파일 최상단의 `using` 지시문 두 곳에만 몰려 있었기 때문에, **의미 분석 없이 `Assets.Scripts.` → `Assets.MyAssets.Scripts.` 문자열 치환만으로 안전하게** 끝낼 수 있다고 판단했다. (만약 본문에 FQN 참조가 있었다면 같은 치환이 의도치 않게 걸릴 수 있어 더 조심스럽게 접근해야 했다.)
+
+폴더 이동 자체는 Unity 에디터에서 사용자가 직접 수행했다 — `.meta`가 자동으로 함께 이동해 GUID(씬·프리팹의 컴포넌트 참조)는 보존된다. 이 작업은 순수하게 **소스 코드 안의 namespace 문자열을 실제 폴더 위치와 다시 맞추는** 것이었다.
+
+### ⑤ 결과
+
+- 50개 파일 전부 갱신, 폴더 위치와 namespace가 다시 1:1 대응
+- `dotnet build` 검증 — 우리 코드 오류/경고 0건 (Unity가 `Assembly-CSharp.csproj`의 `<Compile Include>` 경로도 이동 시점에 자동으로 `Assets\MyAssets\Scripts\...`로 갱신해둔 상태였음을 확인)
+- 저장소 전체에 옛 `Assets.Scripts.` namespace/using 참조 0건 (재검색으로 재확인 — 최초 검색에서 `Assets.MyAssets.Scripts.`가 문자열 `MyAssets`에 `Assets`가 포함되어 있어 오탐이 났었고, 패턴을 `^namespace `/`using ` 접두어로 좁혀 재확인함)
+
+### ⑥ 계획 대비 달라진 점
+
+이 작업 자체가 계획에 없던 추가 작업이다. `MyAssets/`로의 에셋 재편은 별도로 진행된 정리 작업이었고, 그 부작용으로 namespace 정합성이 깨진 것을 바로 수정했다. Phase 0.5에서 "namespace를 폴더 기준으로 둔다"는 규칙을 세워뒀기 때문에, 이번처럼 폴더가 또 옮겨지면 같은 작업이 다시 필요하다는 점을 기록해둔다.
+
+---
+
+## 2026-09-03 — Phase 4: 오브젝트 풀 단순화
+
+**관련 계획:** `wiggly-scribbling-wave.md` Phase 4
+
+### ① 문제 상황
+
+자석볼 오브젝트 풀이 **3단 래퍼**로 되어 있었다.
+
+```
+MemoryPool (직접 구현한 범용 풀)
+  └ MagnetBallMemoryPool (MonoBehaviour 래퍼, 프리팹 참조 보유)
+      └ MagnetBallSpawner (또 다른 래퍼, 메서드를 그대로 전달만 함)
+```
+
+그런데 정작 `GameDirector`는 이 계층을 존중하지 않고 **중간 레이어를 뚫고** 들어갔다. `MagnetBallSpawner`를 참조하면서도 실제로는 `GetComponent<MagnetBallMemoryPool>()`로 한 단계 밑을 직접 호출했다. 즉 래퍼가 캡슐화 역할을 전혀 못 하고 있었다.
+
+### ② 이전 코드
+
+```csharp
+// MagnetBallSpawner.cs — 전달만 하는 껍데기 (27줄)
+public sealed class MagnetBallSpawner : MonoBehaviour
+{
+    private MagnetBallMemoryPool magnetBallMemoryPool;
+
+    private void Awake() { magnetBallMemoryPool = GetComponent<MagnetBallMemoryPool>(); }
+
+    public void SpawnMagnetBall(Vector3 pos, Quaternion rot) => magnetBallMemoryPool.ActivateMagnetBall(pos, rot);
+    public void DeactivateAllMagnetBall() => magnetBallMemoryPool.DeactivateAllMagnetBall();
+}
+```
+
+```csharp
+// MemoryPool.cs — 손으로 만든 풀. 빈 슬롯을 매번 선형 탐색한다 (126줄 중 발췌)
+public class PoolItem
+{
+    public bool isActive;
+    public GameObject gameObject;
+}
+
+public GameObject ActivatePoolItem()
+{
+    if (poolItemList == null) { Debug.Log("..."); return null; }
+
+    PoolItem item = poolItemList.Find(poolItem => poolItem.isActive == false);
+    if (item == null) { Debug.Log("ActivatePoolItem() : ActiveItem is null!!"); return null; }
+
+    activeCount++;
+    item.isActive = true;
+    item.gameObject.SetActive(true);
+    return item.gameObject;
+}
+```
+
+```csharp
+// GameDirector.cs — 래퍼를 뚫고 내부 자료구조까지 직접 만짐
+if (isContact)
+{
+    magnetBallSpawner.GetComponent<MagnetBallMemoryPool>().GetPoolItemList().
+    FindAll(contactMagnetBall =>
+        contactMagnetBall.gameObject.GetComponent<MagnetContact>().IsContact == true).
+    ForEach(magnetBall =>
+        magnetBallSpawner.GetComponent<MagnetBallMemoryPool>().DeactivateMagnetBall(magnetBall.gameObject));
+}
+
+int contactMagnetBallCount = magnetBallSpawner.GetComponent<MagnetBallMemoryPool>().GetPoolItemList().
+    FindAll(magnet => magnet.gameObject.GetComponent<MagnetContact>().IsContact == true).Count;
+```
+
+### ③ 변경 후 코드
+
+```csharp
+// MagnetBallSpawner.cs — 단일 컴포넌트로 통합 (91줄)
+public sealed class MagnetBallSpawner : MonoBehaviour
+{
+    [SerializeField]
+    private GameObject magnetBallPrefab;
+
+    private ObjectPool<GameObject> pool;
+
+    /// <summary>
+    /// 현재 판에 나와 있는 자석볼. ObjectPool<T>는 활성 객체를 열거하는 API가 없어서
+    /// Get/Release 콜백에서 직접 관리한다.
+    /// </summary>
+    private readonly List<GameObject> activeMagnetBalls = new List<GameObject>();
+    public IReadOnlyList<GameObject> ActiveMagnetBalls => activeMagnetBalls;
+
+    private void Awake()
+    {
+        pool = new ObjectPool<GameObject>(
+            createFunc: () => Instantiate(magnetBallPrefab),
+            actionOnGet: OnGetMagnetBall,
+            actionOnRelease: OnReleaseMagnetBall,
+            actionOnDestroy: magnetBall => Destroy(magnetBall));
+    }
+
+    private void OnGetMagnetBall(GameObject magnetBall)
+    {
+        activeMagnetBalls.Add(magnetBall);
+        magnetBall.SetActive(true);
+    }
+
+    private void OnReleaseMagnetBall(GameObject magnetBall)
+    {
+        activeMagnetBalls.Remove(magnetBall);
+        magnetBall.transform.position = Vector3.zero;
+        magnetBall.SetActive(false);
+    }
+
+    public void DeactivateAllMagnetBall()
+    {
+        // Release 콜백이 activeMagnetBalls를 수정하므로 뒤에서부터 순회한다.
+        for (int i = activeMagnetBalls.Count - 1; i >= 0; i--) { pool.Release(activeMagnetBalls[i]); }
+    }
+}
+```
+
+```csharp
+// GameDirector.cs — 공개 API만 사용
+if (isContact)
+{
+    // 반납하면 ActiveMagnetBalls가 줄어들므로 뒤에서부터 순회한다.
+    IReadOnlyList<GameObject> activeMagnetBalls = magnetBallSpawner.ActiveMagnetBalls;
+    for (int i = activeMagnetBalls.Count - 1; i >= 0; i--)
+    {
+        GameObject magnetBall = activeMagnetBalls[i];
+        if (magnetBall.GetComponent<MagnetContact>().IsContact)
+        {
+            magnetBallSpawner.DeactivateMagnetBall(magnetBall);
+        }
+    }
+}
+```
+
+### ④ 판단 근거
+
+**`ObjectPool<T>`만으로는 부족했던 지점.** Unity 내장 `ObjectPool<T>`에는 **활성 객체를 열거하는 API가 없다**(`CountActive`로 개수만 알 수 있다). 그런데 `GameDirector`는 "접촉된 자석볼을 찾아 반납"해야 하므로 활성 목록 순회가 반드시 필요하다. 그래서 `activeMagnetBalls` 리스트를 직접 들고 있되, **`actionOnGet`/`actionOnRelease` 콜백 안에서 자동으로 갱신**되게 했다. 호출부가 등록/해제를 신경 쓸 필요가 없어 누락 위험이 없다.
+
+그럼에도 `ObjectPool<T>`를 쓴 이유는, 빈 슬롯 선형 탐색·`isActive` 플래그 관리·null 가드 같은 **풀의 기계적인 부분을 전부 검증된 표준 구현에 맡길 수 있기 때문**이다. 남은 코드는 "이 게임에서 자석볼을 어떻게 다루는가"만 담게 됐다.
+
+**동작 동일성을 위해 의도적으로 유지한 것들:**
+- 반납 시 `position = Vector3.zero` → `SetActive(false)` **순서**를 원본 그대로 유지했다. 순서를 바꾸면 비활성화 전 이동으로 발생하던 `OnTriggerExit`(스폰 포인트 해제) 타이밍이 달라질 수 있다.
+- `Get()` 후에 위치를 지정하는 순서도 원본과 동일하게 뒀다.
+- 사전 생성은 `ObjectPool<T>`에 해당 API가 없어 **필요한 개수만큼 `Get()` 했다가 곧바로 `Release()`** 하는 표준 방식으로 구현했다. 원본의 "이미 충분하면 추가 생성 안 함" 로직은 `pool.CountAll`로 동일하게 재현했다.
+
+**활성 목록만 순회해도 되는 이유.** 원본은 풀 전체(활성+비활성)를 순회하며 `IsContact`로 걸렀다. `MagnetContact`가 `OnEnable`/`OnDisable` 양쪽에서 `isContact = false`로 초기화하므로 **비활성 볼은 항상 `IsContact == false`** 다. 따라서 활성 목록만 도는 것과 결과가 동일하다.
+
+### ⑤ 결과
+
+- **3개 파일 228줄 → 1개 파일 91줄** (`MemoryPool.cs` 126줄 + `MagnetBallMemoryPool.cs` 75줄 + `MagnetBallSpawner.cs` 27줄 삭제/통합)
+- `GameDirector`에서 `GetComponent<MagnetBallMemoryPool>()` 체인 **5곳 전부 제거** — 이제 `magnetBallSpawner`의 공개 API만 호출한다
+- 내부 자료구조(`MemoryPool.PoolItem` 리스트)가 외부로 새어나가던 `GetPoolItemList()` 제거
+- `dotnet build` 검증 — Assembly-CSharp 진단 0건
+
+### ⑥ 계획 대비 달라진 점
+
+**씬에 직렬화된 프리팹 참조 이관이 계획에 없던 실제 과제였다.** `magnetBallPrefab` 참조는 삭제 대상인 `MagnetBallMemoryPool` 컴포넌트가 들고 있었다. 컴포넌트를 지우면 이 참조도 함께 사라져, 인스펙터에서 수동 재지정이 필요하고 빠뜨리면 런타임에 `Instantiate(null)`로 터진다.
+
+인스펙터 작업을 남기는 대신 **씬 YAML에서 직접 이관**했다. `MagnetBallSapwner` GameObject의 컴포넌트 3개 중 삭제 대상 블록을 걷어내고, 프리팹 참조를 살아남는 `MagnetBallSpawner` 블록으로 옮겼다.
+
+```yaml
+# 이관 후 — MagnetBallSpawner 컴포넌트가 프리팹 참조를 이어받음
+--- !u!114 &760977142
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: e89dbc88bdfbd39439a40a9fc0392731, type: 3}
+  magnetBallPrefab: {fileID: 5492801683074353094, guid: 164d543588676324da803ee5501ada40,
+    type: 3}
+```
+
+GameObject의 `m_Component` 목록에서 삭제된 컴포넌트 항목도 함께 제거해 **고아 참조(missing script)가 남지 않도록** 했다. 삭제 전 `MagnetBallMemoryPool`의 GUID가 GameScene 한 곳에서만 쓰이는지 전수 확인했고, 이관 후 해당 GUID와 고아 fileID가 씬에 0건임을 재검증했다.
+
+그 결과 **이 Phase도 에디터 수동 작업 0건**으로 끝났다.
 
 ---
 
