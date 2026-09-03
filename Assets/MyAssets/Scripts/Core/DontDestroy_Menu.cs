@@ -8,26 +8,10 @@ namespace Assets.MyAssets.Scripts.Core
             Game,
         }
         private SceneName currentScene = SceneName.Title;
-        public SceneName CurrentScene
-        {
-            get
-            {
-                return currentScene;
-            }
-            private set
-            {
-                currentScene = value;
-            }
-        }
+        public SceneName CurrentScene => currentScene;
 
-        /// <summary>
-        /// currentScene -> Game
-        /// </summary>
         public void ChangeGameScene() => currentScene = SceneName.Game;
 
-        /// <summary>
-        /// currentScene -> Title
-        /// </summary>
         public void ChangeTitleScene() => currentScene = SceneName.Title;
     }
 }

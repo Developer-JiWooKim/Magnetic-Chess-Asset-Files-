@@ -866,4 +866,317 @@ GameObject의 `m_Component` 목록에서 삭제된 컴포넌트 항목도 함께
 
 ---
 
+## 2026-09-03 — Phase 5: GameDirector 분리 (타이머 · 턴 상태머신 추출)
+
+**관련 계획:** `wiggly-scribbling-wave.md` Phase 5
+
+### ① 문제 상황
+
+`GameDirector`가 성격이 다른 책임을 한 클래스에 쥐고 있었다. 그중 **타이머**와 **턴 상태**는 Unity API에 거의 의존하지 않는 순수 규칙인데도 MonoBehaviour 안에 묻혀 있어 단독으로 확인할 방법이 없었다.
+
+특히 대기 시간이 `public float confirmTime`으로 **완전히 노출**되어 있었고, 물리 충돌 콜백(`MagnetContact`)이 이 필드를 외부에서 직접 증가시키고 있었다. 누가 언제 이 값을 바꾸는지 추적이 어려웠다.
+
+### ② 이전 코드
+
+```csharp
+// GameDirector.cs — 타이머 상태가 public 필드로 노출
+public float confirmTime;
+
+private IEnumerator StartTimer()
+{
+    confirmTime = currentSetting.waitingTime;
+    int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
+
+    while (confirmTime > 0)
+    {
+        confirmTime -= Time.deltaTime;
+
+        if (confirmTime >= 0)
+            inGameUI_Manager.UpdateUI_WaitingTime_Text(confirmTime, playerList[player_index].playerName);
+        else
+            inGameUI_Manager.UpdateUI_WaitingTime_Text(0, playerList[player_index].playerName);
+
+        yield return null;
+    }
+    // ... 턴 결과 처리 ...
+}
+```
+
+```csharp
+// MagnetContact.cs — 외부에서 필드를 직접 조작
+GameDirector.Instance.confirmTime += (GameManager.Instance.CurrentSetting.waitingTime / 2);
+```
+
+```csharp
+// GameDirector.cs — 턴 상태가 필드 3개 + 메서드로 흩어져 있음
+private enum E_GameState { None, Player_1, Player_2, End }
+private E_GameState gameState;
+private E_GameState winPlayer;
+private int turnCount;
+
+private E_GameState ChangeTurn(E_GameState gameState)
+    => gameState == E_GameState.Player_1 ? E_GameState.Player_2 : E_GameState.Player_1;
+
+private void CurrentTurnPieceDecrease(E_GameState currTurn)
+{
+    if (currTurn == E_GameState.Player_1)      playerList[__PLAYER__1].PieceCount--;
+    else if (currTurn == E_GameState.Player_2) playerList[__PLAYER__2].PieceCount--;
+}
+
+// "현재 턴 플레이어의 인덱스" 계산이 3곳에 똑같이 반복됨
+int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
+
+// 승패 확정
+winPlayer = gameState;
+gameState = E_GameState.End;
+
+// 최대 턴 도달 판정
+if (currentSetting.maxTurn == turnCount && gameState == E_GameState.Player_2) { isPlaying = false; }
+```
+
+### ③ 변경 후 코드
+
+```csharp
+// MatchTimer.cs (신규, 36줄) — Unity 의존 없는 순수 C# 클래스
+public sealed class MatchTimer
+{
+    private float remainingTime;
+
+    /// <summary>UI에 표시할 남은 시간. 음수로 내려가지 않는다.</summary>
+    public float DisplayTime => Mathf.Max(remainingTime, 0f);
+    public bool IsFinished => remainingTime <= 0f;
+
+    public void Begin(float duration)     => remainingTime = duration;
+    public void Tick(float deltaTime)     => remainingTime -= deltaTime;
+    public void ExtendTime(float seconds) => remainingTime += seconds;
+}
+```
+
+```csharp
+// TurnStateMachine.cs (신규, 71줄) — 턴 진행 규칙 전담
+public sealed class TurnStateMachine
+{
+    public E_GameState Current { get; private set; }
+    public E_GameState WinPlayer { get; private set; }
+    public int TurnCount { get; private set; }
+
+    public bool IsPlayerTurn => Current == E_GameState.Player_1 || Current == E_GameState.Player_2;
+    public int CurrentPlayerIndex => Current == E_GameState.Player_1 ? PLAYER_1_INDEX : PLAYER_2_INDEX;
+
+    public void Reset() { Current = E_GameState.None; WinPlayer = E_GameState.None; TurnCount = 0; }
+    public void BeginFirstTurn() => Current = E_GameState.Player_1;
+    public void ChangeTurn() => Current = Current == E_GameState.Player_1 ? E_GameState.Player_2 : E_GameState.Player_1;
+    public void IncreaseTurnCount() => TurnCount++;
+
+    public void FinishWithCurrentPlayerAsWinner() { WinPlayer = Current; Current = E_GameState.End; }
+    public void Stop() => Current = E_GameState.None;
+
+    public bool IsMaxTurnReached(int maxTurn) => maxTurn == TurnCount && Current == E_GameState.Player_2;
+}
+```
+
+```csharp
+// GameDirector.cs — 규칙을 두 클래스에 위임하고 조율만 한다
+private readonly MatchTimer matchTimer = new MatchTimer();
+private readonly TurnStateMachine turnState = new TurnStateMachine();
+
+/// <summary>자석볼 충돌처럼 결과가 아직 확정되지 않았을 때 대기 시간을 늘린다(MagnetContact에서 호출).</summary>
+public void ExtendConfirmTime(float seconds) => matchTimer.ExtendTime(seconds);
+
+private IEnumerator StartTimer()
+{
+    matchTimer.Begin(currentSetting.waitingTime);
+    int player_index = turnState.CurrentPlayerIndex;
+
+    while (!matchTimer.IsFinished)
+    {
+        matchTimer.Tick(Time.deltaTime);
+        inGameUI_Manager.UpdateUI_WaitingTime_Text(matchTimer.DisplayTime, playerList[player_index].playerName);
+        yield return null;
+    }
+    // ...
+}
+
+// 승패 · 턴 전환 · 조각 수 증감이 전부 상태머신 API를 거친다
+if (turnState.IsMaxTurnReached(currentSetting.maxTurn)) { isPlaying = false; }
+turnState.FinishWithCurrentPlayerAsWinner();
+turnState.IncreaseTurnCount();
+turnState.ChangeTurn();
+
+private void CurrentTurnPieceDecrease()
+{
+    if (turnState.IsPlayerTurn == false) { return; }
+    playerList[turnState.CurrentPlayerIndex].PieceCount--;
+}
+```
+
+```csharp
+// MagnetContact.cs — 필드 직접 조작 대신 의도가 드러나는 메서드 호출
+GameDirector.Instance.ExtendConfirmTime(GameManager.Instance.CurrentSetting.waitingTime / 2);
+```
+
+### ④ 판단 근거
+
+**두 클래스 모두 MonoBehaviour가 아닌 순수 C# 클래스로 만들었다.** MonoBehaviour로 만들면 씬에 컴포넌트를 붙여야 하고, 그러면 인스펙터 연결이라는 새 숙제가 생긴다(Phase 0에서 이런 종류의 누락으로 버튼이 먹통이 된 전례가 있다). 순수 클래스는 **씬 변경이 0건**이고 Unity 없이 단독 테스트가 가능하다. 프레임 진행은 소유자인 `GameDirector`가 `Tick(Time.deltaTime)`으로 넣어준다.
+
+**동작 동일성을 위해 확인한 것들:**
+
+- `DisplayTime => Mathf.Max(remainingTime, 0f)`는 원본의 `if (confirmTime >= 0) ... else 0` 분기와 **정확히 같은 값**을 낸다. 루프 조건도 `confirmTime > 0` ↔ `!IsFinished`(`remainingTime <= 0`)로 등가다.
+- `CurrentTurnPieceDecrease`는 원본이 `Player_1`/`Player_2`일 때만 동작하고 `None`/`End`에서는 아무것도 하지 않았다. `IsPlayerTurn` 가드로 이 조건을 그대로 옮겼다.
+- `IncreasePieceCount`의 2중 분기도 같은 이유로 `IsPlayerTurn` + `CurrentPlayerIndex` 한 줄로 합쳤다.
+
+**부수적으로 정리된 중복.** "현재 턴 플레이어의 인덱스"를 구하는 삼항식이 3곳에 복사돼 있었는데 `CurrentPlayerIndex` 하나로 모였다. `__PLAYER__2` 상수는 쓰이지 않게 되어 삭제했다.
+
+### ⑤ 결과
+
+- `GameDirector` **432줄 → 402줄**. 빠진 규칙이 `MatchTimer`(36줄) + `TurnStateMachine`(71줄)으로 **이름을 갖고 독립**했다
+- `public float confirmTime` 제거 — 외부에서 필드를 직접 쓰던 경로가 `ExtendConfirmTime()` 하나로 좁혀짐
+- 턴 상태 필드 3개(`gameState`/`winPlayer`/`turnCount`)가 `turnState` 하나로 대체
+- 승패 판정·최대 턴 도달 판정·턴 전환이 **이름 있는 메서드**가 되어, `if (maxTurn == turnCount && gameState == Player_2)` 같은 조건식을 매번 해석할 필요가 없어짐
+- 씬/프리팹 변경 **0건**, 에디터 수동 작업 **0건**
+- 컴파일 검증 오류 0개. 플레이 테스트로 타이머(자석볼 접촉 시 시간 연장 포함) 정상 동작 확인
+
+### ⑥ 계획 대비 달라진 점 — 빌드 검증이 무의미했다는 사실 발견
+
+이 Phase 도중 **그동안의 빌드 검증이 전부 무의미했다는 것을 발견했다.**
+
+`MatchTimer.cs`를 `Assembly-CSharp.csproj`에 등록하지 않은 채 `GameDirector`가 그 타입을 참조하고 있었는데도 빌드가 "오류 0건"으로 통과했다. 정상이라면 `CS0246`이 나야 한다. 원인을 추적한 결과:
+
+> `Assembly-CSharp`가 ProBuilder 프로젝트를 `ProjectReference`로 물고 있는데, **ProBuilder 패키지가 자체 버그(`ObjectPool<>` 이름 모호성, CS0104)로 컴파일에 실패**한다. 그러면 `Assembly-CSharp`는 아예 빌드 대상에서 제외되고 로그에 등장조차 하지 않는다. "오류 0건"은 **우리 코드가 컴파일된 적이 없다**는 뜻이었다.
+
+Phase 1~4에서 보고한 검증이 모두 이 상태였다. 대체 수단으로 **독립 검증 프로젝트**를 만들었다.
+
+- `Assets/MyAssets/Scripts/**/*.cs` 를 `<Compile>` 로 지정
+- 참조는 `Assembly-CSharp.csproj`의 `<HintPath>` 281개(Unity 엔진 DLL) + `Library/ScriptAssemblies/*.dll` 중 `Assembly-CSharp*.dll`을 제외한 74개(TMPro·UnityEngine.UI 등 패키지 어셈블리)
+- **`ProjectReference`는 넣지 않는다** — 실패하는 ProBuilder를 물지 않기 위해
+
+이 방식으로 다시 검증하니 **오류 0개 / 경고 58개**(전부 `[SerializeField]` 필드의 CS0649로, Unity가 직렬화로 값을 넣어주므로 정상)가 나왔다. 이 컴파일에는 스크립트 50개 전체가 들어가므로 **Phase 1~4의 코드도 이때 함께 검증됐다.**
+
+교훈은 "검증 수단 자체가 실제로 동작하는지 확인해야 한다"는 것이다. 통과 신호가 **통과했기 때문에 나온 것인지, 아예 검사하지 않아서 나온 것인지**를 구분하지 않으면 검증은 없는 것과 같다.
+
+---
+
+## 2026-09-03 — 승패 판정 버그 수정 (2020년 출시판부터 있던 결함)
+
+### ① 문제 상황
+
+Phase 5 이후 플레이 테스트에서 발견. **최대 턴에 도달해 게임이 끝나면 조각 수와 무관하게 항상 AI(Player_2)가 승자로 표시**됐다.
+
+먼저 이 버그가 리팩토링으로 생긴 것인지 확인했다. `ae059ef`(리팩토링 이전, 2020년 출시판 코드)에 동일한 로직이 있었다 — **출시 당시부터 존재하던 결함**이고, 리팩토링은 동작을 그대로 보존했을 뿐이다.
+
+### ② 이전 코드
+
+```csharp
+// 조각이 0이 된 사람이 있으면 종료
+if (playerList.Find(player => player.PieceCount <= 0) != null)
+{
+    isPlaying = false;
+}
+
+// 최대 턴에 도달해도 종료
+if (currentSetting.maxTurn < __TURN_INFINITY__)
+{
+    if (currentSetting.maxTurn == turnCount && gameState == E_GameState.Player_2)
+    {
+        isPlaying = false;
+    }
+}
+
+if (isPlaying == false)
+{
+    winPlayer = gameState;          // ← 승자 = 그냥 "현재 턴 플레이어"
+    gameState = E_GameState.End;
+    GameFSM();
+}
+```
+
+두 종료 조건이 하나의 `isPlaying` 플래그로 합쳐진 뒤, 승자를 **무조건 현재 턴 플레이어**로 정하고 있었다. 조각 수 비교가 코드에 아예 없다.
+
+### ③ 변경 후 코드
+
+```csharp
+bool someoneEmptiedPieces = playerList.Find(player => player.PieceCount <= 0) != null;
+
+bool maxTurnReached = currentSetting.maxTurn < __TURN_INFINITY__
+                      && turnState.IsMaxTurnReached(currentSetting.maxTurn);
+
+// 조각을 다 털어낸 사람이 승리한다. 조각 수는 자기 턴에만 변하므로(놓으면 -1, 붙으면 +N)
+// 0이 된 사람은 항상 현재 턴 플레이어다.
+if (someoneEmptiedPieces)
+{
+    isPlaying = false;
+    turnState.FinishWith(turnState.Current);
+    GameFSM();
+}
+// 최대 턴까지 아무도 못 털어냈으면 남은 조각이 더 적은 쪽이 승리한다.
+else if (maxTurnReached)
+{
+    isPlaying = false;
+    turnState.FinishWith(DecideWinnerByFewestPieces());
+    GameFSM();
+}
+else { /* 턴 전환 */ }
+```
+
+```csharp
+/// <summary>
+/// 최대 턴까지 승부가 나지 않았을 때의 승자. 남은 조각이 더 적은 쪽이 이기고, 같으면 무승부다.
+/// </summary>
+private E_GameState DecideWinnerByFewestPieces()
+{
+    int player1Pieces = playerList[__PLAYER__1].PieceCount;
+    int player2Pieces = playerList[__PLAYER__2].PieceCount;
+
+    if (player1Pieces == player2Pieces) { return E_GameState.None; }
+
+    return player1Pieces < player2Pieces ? E_GameState.Player_1 : E_GameState.Player_2;
+}
+
+/// <summary>결과 화면에 표시할 승자 이름. AI 모드에서 Player_2는 "AI"로 보여준다.</summary>
+private string GetWinnerDisplayName()
+{
+    if (turnState.WinPlayer == E_GameState.None) { return "DRAW"; }
+    if (currentSetting.gameMode == GameMode.AI && turnState.WinPlayer == E_GameState.Player_2) { return "AI"; }
+    return turnState.WinPlayer.ToString();
+}
+```
+
+`TurnStateMachine`도 승자를 외부에서 지정할 수 있게 바꿨다.
+
+```csharp
+// 이전 — 승자를 항상 현재 턴 플레이어로 고정
+public void FinishWithCurrentPlayerAsWinner() { WinPlayer = Current; Current = E_GameState.End; }
+
+// 이후 — 승자 판정은 호출부가 하고, 상태머신은 확정만 한다
+public void FinishWith(E_GameState winner) { WinPlayer = winner; Current = E_GameState.End; }
+```
+
+`EndBattle()`의 3중 분기 결과 표시도 `GetWinnerDisplayName()` 한 줄로 정리됐다.
+
+### ④ 판단 근거
+
+**게임 규칙(사용자 확인):** 번갈아 자석을 놓고(놓을 때마다 조각 -1), 대기 시간 동안 부딪힌 자석 개수가 자기 조각에 추가된다(+N). **최대 턴 전에 자기 조각이 0이 되면 그 사람이 승리**하고, **최대 턴까지 아무도 0이 못 되면 남은 조각이 더 적은 사람이 승리**한다. 즉 조각을 털어내는 것이 목표다.
+
+**두 증상 중 하나는 사실 정상 동작이었다.** "AI 조각이 0이 되자 AI 승리"도 함께 보고됐는데, 분석해보니 이건 규칙대로다. 조각 수는 **자기 턴에만** 변하므로(놓기 -1, 흡수 +N), 0이 되는 사람은 필연적으로 그 시점의 현재 턴 플레이어다. 따라서 기존의 `winPlayer = gameState`가 이 경우에는 **우연히** 규칙과 일치했다. 이 관계를 코드 주석으로 남겨, 나중에 읽는 사람이 `FinishWith(turnState.Current)`를 보고 의아해하지 않도록 했다.
+
+**진짜 결함은 최대 턴 경로였다.** `IsMaxTurnReached`는 `Current == Player_2`일 때만 참이므로, 이 경로로 끝나면 승자가 **항상 Player_2로 고정**된다. AI 모드에서는 무조건 AI 승리였다.
+
+**무승부 처리는 규칙에 없어 직접 정했다.** 최대 턴에서 양쪽 조각 수가 같을 수 있는데 규칙에 언급이 없었다. 어느 한쪽을 임의로 고르는 대신 `E_GameState.None`을 승자로 두고 결과 화면에 `DRAW`로 표시하도록 했다.
+
+### ⑤ 결과
+
+- 최대 턴 종료 시 **조각 수를 실제로 비교**해 승자를 정한다
+- 무승부가 표현 가능해졌다(`WINNER - DRAW`)
+- 승자 판정 책임이 분리됐다 — `TurnStateMachine`은 "확정"만 하고, "누가 이겼는가"는 조각 수를 아는 `GameDirector`가 판단한다
+- `EndBattle()`의 중첩 분기가 한 줄로 축소
+- 컴파일 검증 오류 0개
+
+### ⑥ 계획 대비 달라진 점
+
+리팩토링 계획에 없던 **기능 버그**였다. Phase 5에서 턴 상태머신을 추출하지 않았다면 발견하기 어려웠을 가능성이 높다. `winPlayer = gameState`라는 한 줄은 그 자체로는 이상해 보이지 않지만, 이를 `FinishWithCurrentPlayerAsWinner()`라는 **이름 있는 메서드로 만드는 순간 "현재 턴 플레이어를 승자로"라는 규칙이 문장으로 드러났고**, 그게 실제 게임 규칙과 다르다는 점이 눈에 띄었다.
+
+리팩토링의 목적은 동작을 바꾸지 않는 것이지만, **의도를 이름으로 드러내는 과정에서 원래 있던 결함이 노출되는** 부수 효과가 있다는 것을 보여주는 사례다.
+
+---
+
 <!-- 이후 작업은 이 아래에 최신순으로 추가 -->

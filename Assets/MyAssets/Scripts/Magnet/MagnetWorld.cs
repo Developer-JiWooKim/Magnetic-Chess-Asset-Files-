@@ -27,15 +27,15 @@ namespace Assets.MyAssets.Scripts.Magnet
 
             float distance = dir.magnitude;
 
-
             float part0 = Permeability * magnet1.MagnetForce * magnet2.MagnetForce;
             float part1 = 4 * Mathf.PI * distance;
-
 
             float force = part0 / part1;
 
             if (magnet1.MagneticPole == magnet2.MagneticPole)
+            {
                 force = -force;
+            }
 
             return force * dir.normalized;
         }
@@ -64,15 +64,21 @@ namespace Assets.MyAssets.Scripts.Magnet
                 for (int j = 0; j < magnets.Count; j++)
                 {
                     if (i == j)
+                    {
                         continue;
+                    }
 
                     Magnet magnet_2 = magnets[j];
 
                     if (magnet_2.MagnetForce < minMagnetForce)
+                    {
                         continue;
+                    }
 
                     if (magnet_1.transform.parent == magnet_2.transform.parent)
+                    {
                         continue;
+                    }
 
                     Vector3 force = CalculateGilbertForce(magnet_1, magnet_2);
                     float magnetForce = magnet_1.MagnetForce * magnet_2.MagnetForce;

@@ -13775,7 +13775,6 @@ MonoBehaviour:
   result_Panel: {fileID: 1361996354}
   aiFSM: {fileID: 1563898578}
   preventImage: {fileID: 1741089962}
-  confirmTime: 0
 --- !u!4 &239988054
 Transform:
   m_ObjectHideFlags: 0

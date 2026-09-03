@@ -13,7 +13,6 @@ namespace Assets.MyAssets.Scripts.Magnet
         public GameObject spawnPoint;
 
         private void Awake() => Setup();
-
         private void Setup()
         {
             isContact = false;
@@ -30,7 +29,9 @@ namespace Assets.MyAssets.Scripts.Magnet
             if (collision.collider.CompareTag("Magnet"))
             {
                 // 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.
-                GameDirector.Instance.confirmTime += (GameManager.Instance.CurrentSetting.waitingTime / 2);
+                // TODO#: / 2 보다는 * 0.5f 가 더 낫지 않나?
+                GameDirector.Instance.ExtendConfirmTime(GameManager.Instance.CurrentSetting.waitingTime / 2);
+
 
                 isContact = true;
             }

@@ -29,20 +29,15 @@ namespace Assets.MyAssets.Scripts.Match
         private const int __TURN_INFINITY__ = 100;
         private const float __SPAWN__POINT_Y = 0.7f;
 
-        private enum E_GameState
-        {
-            None,
-            Player_1,
-            Player_2,
-            End,
-        }
-
-        private E_GameState gameState;
-        private E_GameState winPlayer;
-        private int turnCount;
+        private readonly TurnStateMachine turnState = new TurnStateMachine();
         private bool isTouch;
 
-        public float confirmTime;
+        private readonly MatchTimer matchTimer = new MatchTimer();
+
+        /// <summary>
+        /// 자석볼 충돌처럼 결과가 아직 확정되지 않았을 때 대기 시간을 늘린다(MagnetContact에서 호출).
+        /// </summary>
+        public void ExtendConfirmTime(float seconds) => matchTimer.ExtendTime(seconds);
 
         private GameSetting currentSetting;
         public bool isPlaying { get; private set; }
@@ -56,16 +51,16 @@ namespace Assets.MyAssets.Scripts.Match
 
         private void GameFSM()
         {
-            switch (gameState)
+            switch (turnState.Current)
             {
                 case E_GameState.None:
                     BattleStart();
                     break;
                 case E_GameState.Player_1:
-                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[__PLAYER__1].playerName);
+                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[turnState.CurrentPlayerIndex].playerName);
                     break;
                 case E_GameState.Player_2:
-                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[__PLAYER__2].playerName);
+                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[turnState.CurrentPlayerIndex].playerName);
 
                     if (currentSetting.gameMode == GameMode.AI)
                     {
@@ -82,7 +77,7 @@ namespace Assets.MyAssets.Scripts.Match
         private void BattleStart()
         {
             preventImage.SetActive(true);
-            gameState = E_GameState.Player_1;
+            turnState.BeginFirstTurn();
 
             cameraView.ChangeCameraView(cameraView.TopView_tr, () => preventImage.SetActive(false));
             GameFSM();
@@ -112,25 +107,16 @@ namespace Assets.MyAssets.Scripts.Match
         }
         private IEnumerator StartTimer()
         {
-            confirmTime = currentSetting.waitingTime;
+            matchTimer.Begin(currentSetting.waitingTime);
 
-            int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
+            int player_index = turnState.CurrentPlayerIndex;
 
-            while (confirmTime > 0)
+            while (!matchTimer.IsFinished)
             {
-                confirmTime -= Time.deltaTime;
-
-                if (confirmTime >= 0)
-                {
-                    inGameUI_Manager.UpdateUI_WaitingTime_Text(confirmTime, playerList[player_index].playerName);
-                }
-                else
-                {
-                    inGameUI_Manager.UpdateUI_WaitingTime_Text(0, playerList[player_index].playerName);
-                }
+                matchTimer.Tick(Time.deltaTime);
+                inGameUI_Manager.UpdateUI_WaitingTime_Text(matchTimer.DisplayTime, playerList[player_index].playerName);
                 yield return null;
             }
-
 
             magnetWorld.IsActive = false;
 
@@ -156,39 +142,36 @@ namespace Assets.MyAssets.Scripts.Match
             }
 
 
-            if (playerList.Find(player => player.PieceCount <= 0) != null)
+            bool someoneEmptiedPieces = playerList.Find(player => player.PieceCount <= 0) != null;
+
+            bool maxTurnReached = currentSetting.maxTurn < __TURN_INFINITY__
+                                  && turnState.IsMaxTurnReached(currentSetting.maxTurn);
+
+            // 조각을 다 털어낸 사람이 승리한다. 조각 수는 자기 턴에만 변하므로(놓으면 -1, 붙으면 +N)
+            // 0이 된 사람은 항상 현재 턴 플레이어다.
+            if (someoneEmptiedPieces)
             {
                 isPlaying = false;
+                turnState.FinishWith(turnState.Current);
+                GameFSM();
             }
-
-
-            if (currentSetting.maxTurn < __TURN_INFINITY__)
+            // 최대 턴까지 아무도 못 털어냈으면 남은 조각이 더 적은 쪽이 승리한다.
+            else if (maxTurnReached)
             {
-
-                if (currentSetting.maxTurn == turnCount && gameState == E_GameState.Player_2)
-                {
-
-                    isPlaying = false;
-                }
-            }
-
-            if (isPlaying == false)
-            {
-                winPlayer = gameState;
-                gameState = E_GameState.End;
+                isPlaying = false;
+                turnState.FinishWith(DecideWinnerByFewestPieces());
                 GameFSM();
             }
 
             else
             {
-                if (gameState == E_GameState.Player_2)
+                if (turnState.Current == E_GameState.Player_2)
                 {
-                    turnCount++;
-                    inGameUI_Manager.UpdateUI_TurnText(turnCount);
+                    turnState.IncreaseTurnCount();
+                    inGameUI_Manager.UpdateUI_TurnText(turnState.TurnCount);
                 }
 
-                gameState = ChangeTurn(gameState);
-
+                turnState.ChangeTurn();
 
                 isTouch = false;
 
@@ -217,9 +200,9 @@ namespace Assets.MyAssets.Scripts.Match
                 SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
                 magnetBallSpawner.SpawnMagnetBall(hitPos, Random.rotation);
 
-                CurrentTurnPieceDecrease(gameState);
+                CurrentTurnPieceDecrease();
 
-                int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
+                int player_index = turnState.CurrentPlayerIndex;
 
                 inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
             }
@@ -239,33 +222,25 @@ namespace Assets.MyAssets.Scripts.Match
 
             magnetWorld.IsActive = true;
 
-
             SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
             magnetBallSpawner.SpawnMagnetBall(aiSpawnPoint, Random.rotation);
 
-            CurrentTurnPieceDecrease(gameState);
+            CurrentTurnPieceDecrease();
 
-            int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
+            int player_index = turnState.CurrentPlayerIndex;
 
             inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
 
             StartCoroutine(StartTimer());
         }
-        private E_GameState ChangeTurn(E_GameState gameState)
-        {
-            return gameState == E_GameState.Player_1 ? E_GameState.Player_2 : E_GameState.Player_1;
-        }
 
-        private void CurrentTurnPieceDecrease(E_GameState currTurn)
+        private void CurrentTurnPieceDecrease()
         {
-            if (currTurn == E_GameState.Player_1)
+            if (turnState.IsPlayerTurn == false)
             {
-                playerList[__PLAYER__1].PieceCount--;
+                return;
             }
-            else if (currTurn == E_GameState.Player_2)
-            {
-                playerList[__PLAYER__2].PieceCount--;
-            }
+            playerList[turnState.CurrentPlayerIndex].PieceCount--;
         }
         private void EndBattle()
         {
@@ -280,22 +255,7 @@ namespace Assets.MyAssets.Scripts.Match
             result_Panel.Show();
 
 
-            if (currentSetting.gameMode == GameMode.AI)
-            {
-                if (winPlayer == E_GameState.Player_2)
-                {
-                    result_Panel.Result_Initialize("AI", turnCount);
-                }
-                else
-                {
-
-                    result_Panel.Result_Initialize(winPlayer.ToString(), turnCount);
-                }
-            }
-            else
-            {
-                result_Panel.Result_Initialize(winPlayer.ToString(), turnCount);
-            }
+            result_Panel.Result_Initialize(GetWinnerDisplayName(), turnState.TurnCount);
 
             StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(result_Panel.gameObject.GetComponent<CanvasGroup>(), .3f));
         }
@@ -337,6 +297,35 @@ namespace Assets.MyAssets.Scripts.Match
             }
         }
 
+        /// <summary>
+        /// 최대 턴까지 승부가 나지 않았을 때의 승자. 남은 조각이 더 적은 쪽이 이기고, 같으면 무승부다.
+        /// </summary>
+        private E_GameState DecideWinnerByFewestPieces()
+        {
+            int player1Pieces = playerList[__PLAYER__1].PieceCount;
+            int player2Pieces = playerList[__PLAYER__2].PieceCount;
+
+            if (player1Pieces == player2Pieces)
+            {
+                return E_GameState.None;
+            }
+            return player1Pieces < player2Pieces ? E_GameState.Player_1 : E_GameState.Player_2;
+        }
+
+        /// <summary>결과 화면에 표시할 승자 이름. AI 모드에서 Player_2는 "AI"로 보여준다.</summary>
+        private string GetWinnerDisplayName()
+        {
+            if (turnState.WinPlayer == E_GameState.None)
+            {
+                return "DRAW";
+            }
+            if (currentSetting.gameMode == GameMode.AI && turnState.WinPlayer == E_GameState.Player_2)
+            {
+                return "AI";
+            }
+            return turnState.WinPlayer.ToString();
+        }
+
         private int IncreasePieceCount()
         {
             int contactMagnetBallCount = 0;
@@ -348,13 +337,9 @@ namespace Assets.MyAssets.Scripts.Match
                 }
             }
 
-            if (gameState == E_GameState.Player_1)
+            if (turnState.IsPlayerTurn)
             {
-                playerList[__PLAYER__1].PieceCount += contactMagnetBallCount;
-            }
-            else if (gameState == E_GameState.Player_2)
-            {
-                playerList[__PLAYER__2].PieceCount += contactMagnetBallCount;
+                playerList[turnState.CurrentPlayerIndex].PieceCount += contactMagnetBallCount;
             }
 
             return contactMagnetBallCount;
@@ -369,7 +354,7 @@ namespace Assets.MyAssets.Scripts.Match
 
 
             inGameUI_Manager.Show_All_Panel();
-            inGameUI_Manager.UpdateUI_TurnText(turnCount + 1);
+            inGameUI_Manager.UpdateUI_TurnText(turnState.TurnCount + 1);
             if (playerList != null)
             {
                 playerList.ForEach(player =>
@@ -393,13 +378,11 @@ namespace Assets.MyAssets.Scripts.Match
 
             preventImage.SetActive(true);
 
-            gameState = E_GameState.None;
-            winPlayer = E_GameState.None;
+            turnState.Reset();
 
             isPlaying = false;
             isTouch = false;
 
-            turnCount = 0;
             magnetWorld.IsActive = false;
 
             Initialize_GameSettings();
@@ -426,7 +409,7 @@ namespace Assets.MyAssets.Scripts.Match
         {
             StopAllCoroutines();
             isPlaying = false;
-            gameState = E_GameState.None;
+            turnState.Stop();
         }
     }
 }
