@@ -4,13 +4,12 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetBallSpawnPoint : MonoBehaviour
     {
-        [SerializeField]
-        private bool isEmpty = true;
-        public bool IsEmpty { get { return isEmpty; } }
+        [SerializeField] private bool isEmpty = true;
+
+        public bool IsEmpty => isEmpty;
 
         private void OnTriggerEnter(Collider other)
         {
-
             if (other.CompareTag("Magnet"))
             {
                 isEmpty = false;
@@ -19,19 +18,12 @@ namespace Assets.MyAssets.Scripts.Magnet
         }
         private void OnTriggerExit(Collider other)
         {
-
             if (other.CompareTag("Magnet"))
             {
                 ChangeIsEmpty();
             }
         }
-        public void ChangeIsEmpty()
-        {
-            isEmpty = true;
-        }
-        public void Initialize()
-        {
-            isEmpty = true;
-        }
+        public void ChangeIsEmpty() => isEmpty = true;
+        public void Initialize() => isEmpty = true;
     }
 }

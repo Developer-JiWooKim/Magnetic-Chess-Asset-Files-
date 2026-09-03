@@ -6,13 +6,11 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class CameraView : MonoBehaviour
     {
-        [SerializeField]
-        private Transform quarterView;
-        [SerializeField]
-        private Transform topView;
-        [SerializeField]
-        private Transform startPointView;
+        [SerializeField] private Transform quarterView;
+        [SerializeField] private Transform topView;
+        [SerializeField] private Transform startPointView;
 
+        // const
         private const float __MOVE_SPEED = 3f;
 
         public Transform QuarterView_tr

@@ -5,12 +5,9 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class AddResumeAction : MonoBehaviour
     {
-        [SerializeField]
-        private GameObject background;
-        [SerializeField]
-        private GameDirector gameDirector;
-        [SerializeField]
-        private InGameUI_Manager inGameUI_Manager;
+        [SerializeField] private GameObject background;
+        [SerializeField] private GameDirector gameDirector;
+        [SerializeField] private InGameUI_Manager inGameUI_Manager;
 
         // ResumePanel은 TitleScene의 DontDestroyOnLoad 메뉴 캔버스에 있어
         // GameScene 인스펙터로는 연결할 수 없다. 런타임에 한 번만 찾는다.

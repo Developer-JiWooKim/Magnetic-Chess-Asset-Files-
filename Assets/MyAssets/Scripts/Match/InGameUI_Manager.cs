@@ -10,14 +10,12 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class InGameUI_Manager : MonoBehaviour
     {
-        [SerializeField]
-        private TextMeshProUGUI turnText;
+        [SerializeField] private TextMeshProUGUI turnText;
+
+        [SerializeField] private Character_FaceCam faceCam;
+
 
         private List<Player_Panel> player_Panels;
-
-        [SerializeField]
-        private Character_FaceCam faceCam;
-
 
         private const float __ALPHA_VALUE_1 = 1f;
         private const float __ALPHA_VALUE_0_4 = .4f;
@@ -35,7 +33,6 @@ namespace Assets.MyAssets.Scripts.Match
         {
             if (player_Panels != null)
             {
-                Debug.Log("Player_Panel is show");
                 player_Panels.ForEach((panel) =>
                 {
                     panel.gameObject.SetActive(true);
@@ -51,7 +48,6 @@ namespace Assets.MyAssets.Scripts.Match
         {
             if (player_Panels != null)
             {
-                Debug.Log("Player_Panel is hide");
                 player_Panels.ForEach((panel) =>
                 {
                     panel.gameObject.SetActive(false);
@@ -82,7 +78,6 @@ namespace Assets.MyAssets.Scripts.Match
 
         public void Initialize_UI()
         {
-
             if (player_Panels != null)
             {
                 player_Panels.ForEach(panel => panel.Initiallize_Panel());

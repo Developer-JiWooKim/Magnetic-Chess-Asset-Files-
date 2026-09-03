@@ -7,30 +7,21 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class Player_Panel : Player_Panel_Base
     {
-        [SerializeField]
-        private TextMeshProUGUI playerName_Text;
-        [SerializeField]
-        private TextMeshProUGUI chessPiece_Text;
-        [SerializeField]
-        private TextMeshProUGUI playerTimer_Text;
-        [SerializeField]
-        private Image faceBorder_Image;
+        [SerializeField] private TextMeshProUGUI playerName_Text;
+        [SerializeField] private TextMeshProUGUI chessPiece_Text;
+        [SerializeField] private TextMeshProUGUI playerTimer_Text;
+        [SerializeField] private Image faceBorder_Image;
 
-        [SerializeField]
-        private PlayerName playerName;
-        public PlayerName Player_Panel_playerName
-        {
-            get
-            {
-                return playerName;
-            }
-        }
+        [SerializeField] private PlayerName playerName;
+        public PlayerName Player_Panel_playerName => playerName;
+
         public override void Initiallize_Panel()
         {
             SetName();
             Update_PieceCount(0);
             Update_Timer(0);
         }
+
         public void SetName()
         {
             bool isAIMode = GameManager.Instance.CurrentSetting.gameMode == GameMode.AI;

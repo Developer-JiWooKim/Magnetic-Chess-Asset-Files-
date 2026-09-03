@@ -1,6 +1,4 @@
 namespace Assets.MyAssets.Scripts.UI
 {
-    public sealed class OptionButton : UIPanel
-    {
-    }
+    public sealed class OptionButton : UIPanel { }
 }

@@ -6,8 +6,7 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetBallSpawner : MonoBehaviour
     {
-        [SerializeField]
-        private GameObject magnetBallPrefab;
+        [SerializeField] private GameObject magnetBallPrefab;
 
         private ObjectPool<GameObject> pool;
 
@@ -15,7 +14,7 @@ namespace Assets.MyAssets.Scripts.Magnet
         /// 현재 판에 나와 있는 자석볼. ObjectPool&lt;T&gt;는 활성 객체를 열거하는 API가 없어서
         /// Get/Release 콜백에서 직접 관리한다.
         /// </summary>
-        private readonly List<GameObject> activeMagnetBalls = new List<GameObject>();
+        private readonly List<GameObject> activeMagnetBalls = new();
         public IReadOnlyList<GameObject> ActiveMagnetBalls => activeMagnetBalls;
 
         private void Awake()

@@ -2,11 +2,6 @@ using UnityEngine;
 
 namespace Assets.MyAssets.Scripts.Core
 {
-    /// <summary>
-    /// Singleton Pattern
-    /// 상속받는 쪽에서 Awake()를 직접 정의하면 이 셋업이 실행되지 않으므로,
-    /// 추가 초기화가 필요하면 Awake()를 override 하고 base.Awake()를 먼저 호출할 것.
-    /// </summary>
     public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>
     {
         private static T instance;
@@ -24,7 +19,7 @@ namespace Assets.MyAssets.Scripts.Core
         }
 
         /// <summary>
-        /// 씬이 바뀌어도 유지할지 여부. 씬에 종속된 매니저(예: GameDirector)는 false로 override.
+        /// 씬이 바뀌어도 유지할지 여부.
         /// </summary>
         protected virtual bool IsPersistent => true;
 

@@ -7,8 +7,7 @@ namespace Assets.MyAssets.Scripts.AI
 {
     public sealed class AI_FSM : MonoBehaviour
     {
-        [SerializeField]
-        private GameObject magnetBallSpawnPoints;
+        [SerializeField] private GameObject magnetBallSpawnPoints;
 
         private List<MagnetBallSpawnPoint> spawnPointList;
 
@@ -17,14 +16,12 @@ namespace Assets.MyAssets.Scripts.AI
 
         private List<int> final_index = new();
 
-        private void Awake()
-        {
-            Setup();
-        }
+        private void Awake() => Setup();
         private void Setup()
         {
             spawnPointList = magnetBallSpawnPoints.GetComponentsInChildren<MagnetBallSpawnPoint>().ToList();
         }
+
         private void CheckSpawnPoints()
         {
             emptyPointsTransform.Clear();
@@ -108,10 +105,12 @@ namespace Assets.MyAssets.Scripts.AI
 
             return emptyPointsTransform[randomIndex].position;
         }
+
         public void SpawnPoint_Initialize()
         {
             spawnPointList.ForEach(point => point.Initialize());
         }
+
         public Vector3 AIMagnetBallSpawnPoint()
         {
             CheckSpawnPoints();

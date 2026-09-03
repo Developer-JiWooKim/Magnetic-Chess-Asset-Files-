@@ -7,13 +7,9 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class ModeButtons : MonoBehaviour
     {
-        [SerializeField]
-        private List<ModeBase> buttons;
+        [SerializeField] private List<ModeBase> buttons;
 
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
 
         private void Setup()
         {

@@ -1,4 +1,3 @@
-using UnityEngine;
 using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.MainMenu

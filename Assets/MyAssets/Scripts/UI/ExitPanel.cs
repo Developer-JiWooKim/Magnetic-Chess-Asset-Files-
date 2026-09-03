@@ -5,17 +5,11 @@ namespace Assets.MyAssets.Scripts.UI
 {
     public sealed class ExitPanel : UIPanel
     {
-        [SerializeField]
-        private GameObject exitPanel;
+        [SerializeField] private GameObject exitPanel;
 
-        public override void Show()
-        {
-            exitPanel.SetActive(true);
-        }
-        public override void Hide()
-        {
-            exitPanel.SetActive(false);
-        }
+        public override void Show() => exitPanel.SetActive(true);
+        public override void Hide() => exitPanel.SetActive(false);
+
         public void OnClickExit_yes_Button()
         {
             Application.Quit();

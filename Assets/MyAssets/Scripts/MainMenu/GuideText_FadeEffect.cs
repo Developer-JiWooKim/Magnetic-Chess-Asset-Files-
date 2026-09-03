@@ -7,8 +7,7 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class GuideText_FadeEffect : MonoBehaviour
     {
-        [SerializeField]
-        private TextMeshProUGUI guideText;
+        [SerializeField] private TextMeshProUGUI guideText;
 
         private float fadeTime = 1f;
 

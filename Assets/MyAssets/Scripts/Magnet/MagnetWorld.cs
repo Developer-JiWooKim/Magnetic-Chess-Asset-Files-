@@ -12,15 +12,13 @@ namespace Assets.MyAssets.Scripts.Magnet
 
         private float minMagnetForce = 5.0f;
 
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
         private void Setup()
         {
             IsActive = false;
         }
-        Vector3 CalculateGilbertForce(Magnet magnet1, Magnet magnet2)
+
+        private Vector3 CalculateGilbertForce(Magnet magnet1, Magnet magnet2)
         {
             Vector3 m1_Pos = magnet1.transform.position;
             Vector3 m2_Pos = magnet2.transform.position;
@@ -34,7 +32,7 @@ namespace Assets.MyAssets.Scripts.Magnet
             float part1 = 4 * Mathf.PI * distance;
 
 
-            float force = (part0 / part1);
+            float force = part0 / part1;
 
             if (magnet1.MagneticPole == magnet2.MagneticPole)
                 force = -force;
@@ -86,6 +84,7 @@ namespace Assets.MyAssets.Scripts.Magnet
                 {
                     accF = accF.normalized * MaxForce;
                 }
+
                 magnetRigidbody.AddForceAtPosition(accF, magnet_1.transform.position);
             }
         }

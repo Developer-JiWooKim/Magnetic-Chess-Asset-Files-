@@ -7,17 +7,13 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class GameSettingMenu : MonoBehaviour
     {
-        [SerializeField]
-        private TMP_Dropdown pieceCountDropdown;
+        [SerializeField] private TMP_Dropdown pieceCountDropdown;
 
-        [SerializeField]
-        private TMP_Dropdown pieceCountDropdown_AI;
+        [SerializeField] private TMP_Dropdown pieceCountDropdown_AI;
 
-        [SerializeField]
-        private TMP_Dropdown waitingTimeDropdown;
+        [SerializeField] private TMP_Dropdown waitingTimeDropdown;
 
-        [SerializeField]
-        private TMP_Dropdown maxTurnDropdown;
+        [SerializeField] private TMP_Dropdown maxTurnDropdown;
 
         private void OnEnable()
         {

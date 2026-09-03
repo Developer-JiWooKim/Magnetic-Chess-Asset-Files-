@@ -10,15 +10,14 @@ namespace Assets.MyAssets.Scripts.MainMenu
 
         private const float __FADE_TIME = 0.2f;
 
-        private void Awake()
-        {
-            Setup();
-        }
+        private void Awake() => Setup();
+
         private void Setup()
         {
             canvasGroup = GetComponent<CanvasGroup>();
             panel_Name = E_UI_Panel_Name.ModeSelect;
         }
+
         public override void Show()
         {
             if (gameObject.activeSelf)

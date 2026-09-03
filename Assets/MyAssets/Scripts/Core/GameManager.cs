@@ -9,13 +9,10 @@ namespace Assets.MyAssets.Scripts.Core
 {
     public sealed class GameManager : Singleton<GameManager>
     {
-        [SerializeField]
-        private GameSetting gameSetting;
+        [SerializeField] private GameSetting gameSetting;
+        [SerializeField] private GameObject loadingWindow;
+        [SerializeField] private GameObject percent;
 
-        /// <summary>
-        /// 현재 게임 설정(읽기 전용). GameSetting은 struct라 이 프로퍼티는 복사본을 돌려주므로,
-        /// 값을 바꾸려면 반드시 아래 Set 메서드들을 거쳐야 한다.
-        /// </summary>
         public GameSetting CurrentSetting => gameSetting;
 
         public void SetGameMode(GameMode mode) => gameSetting.gameMode = mode;
@@ -26,15 +23,7 @@ namespace Assets.MyAssets.Scripts.Core
 
         public event Action ChangeSceneAction;
 
-        [SerializeField]
-        private GameObject loadingWindow;
-        [SerializeField]
-        private GameObject percent;
-
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
         private void Setup()
         {
             Application.targetFrameRate = 60;
@@ -43,7 +32,6 @@ namespace Assets.MyAssets.Scripts.Core
             {
                 DefaultGameOption();
             }
-
 
             DefaultGameSetting();
 

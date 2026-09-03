@@ -949,8 +949,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 748969518}
-        m_TargetAssemblyTypeName: MenuBar, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_TargetAssemblyTypeName: Assets.MyAssets.Scripts.UI.MenuBar, Assembly-CSharp
+        m_MethodName: PlaySoundMenuButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4502,22 +4502,22 @@ PrefabInstance:
     - target: {fileID: 110780548371015361, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Slider
+      value: PlaySoundSlider
       objectReference: {fileID: 0}
     - target: {fileID: 110780548371015361, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
-      value: SetVolume_SFX
+      value: SetVolumeSFX
       objectReference: {fileID: 0}
     - target: {fileID: 110780548371015361, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: OptionPanel, Assembly-CSharp
+      value: Assets.MyAssets.Scripts.UI.OptionPanel, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 110780548371015361, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
-      value: OptionPanel, Assembly-CSharp
+      value: Assets.MyAssets.Scripts.UI.OptionPanel, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 110780548371015361, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
@@ -4632,7 +4632,7 @@ PrefabInstance:
     - target: {fileID: 2964691750486614893, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Save_Button_Press
+      value: PlaySoundSaveButtonPress
       objectReference: {fileID: 0}
     - target: {fileID: 2964691750486614893, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
@@ -4643,6 +4643,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_MethodName
       value: Hide
+      objectReference: {fileID: 0}
+    - target: {fileID: 2964691750486614893, guid: 40a4ecee9bcadd049a1e3565ca728625,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: Assets.MyAssets.Scripts.UI.OptionPanel, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 2964691750486614893, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
@@ -4872,22 +4877,22 @@ PrefabInstance:
     - target: {fileID: 6021052090767163902, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Slider
+      value: PlaySoundSlider
       objectReference: {fileID: 0}
     - target: {fileID: 6021052090767163902, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
-      value: SetVolume_BGM
+      value: SetVolumeBGM
       objectReference: {fileID: 0}
     - target: {fileID: 6021052090767163902, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: OptionPanel, Assembly-CSharp
+      value: Assets.MyAssets.Scripts.UI.OptionPanel, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 6021052090767163902, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
-      value: OptionPanel, Assembly-CSharp
+      value: Assets.MyAssets.Scripts.UI.OptionPanel, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 6021052090767163902, guid: 40a4ecee9bcadd049a1e3565ca728625,
         type: 3}
@@ -25978,8 +25983,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 748969518}
-        m_TargetAssemblyTypeName: MenuBar, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_TargetAssemblyTypeName: Assets.MyAssets.Scripts.UI.MenuBar, Assembly-CSharp
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -30518,8 +30523,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 748969518}
-        m_TargetAssemblyTypeName: MenuBar, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_TargetAssemblyTypeName: Assets.MyAssets.Scripts.UI.MenuBar, Assembly-CSharp
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -30764,8 +30769,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 748969518}
-        m_TargetAssemblyTypeName: MenuBar, Assembly-CSharp
-        m_MethodName: PlaySound_Menu_Button_Press
+        m_TargetAssemblyTypeName: Assets.MyAssets.Scripts.UI.MenuBar, Assembly-CSharp
+        m_MethodName: PlaySoundMenuButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

@@ -4,12 +4,10 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class Character_FaceCam : MonoBehaviour
     {
-        [SerializeField]
-        private Camera[] cameras = new Camera[2];
-        [SerializeField]
-        private Transform[] face_Characters;
+        [SerializeField] private Camera[] cameras = new Camera[2];
+        [SerializeField] private Transform[] face_Characters;
 
-
+        // consts
         private const int __INDEX_0 = 0;
         private const int __INDEX_1 = 1;
 

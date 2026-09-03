@@ -6,14 +6,10 @@ namespace Assets.MyAssets.Scripts.UI
 {
     public sealed class MenuBar : MonoBehaviour
     {
-        [SerializeField]
-        private RectTransform background;
-        [SerializeField]
-        private MenuList menu;
-        [SerializeField]
-        private float sizeUpSpeed = 1000f;
-        [SerializeField]
-        private bool isShowList = false;
+        [SerializeField] private RectTransform background;
+        [SerializeField] private MenuList menu;
+        [SerializeField] private float sizeUpSpeed = 1000f;
+        [SerializeField] private bool isShowList = false;
 
         private struct MenuBarSize
         {
@@ -24,6 +20,7 @@ namespace Assets.MyAssets.Scripts.UI
         private MenuBarSize title_menuBarSize;
         private MenuBarSize game_menuBarSize;
 
+        // consts
         private const float __TITLE_BEFORE_X = 130f;
         private const float __TITLE_AFTER_X = 365f;
 
@@ -32,20 +29,20 @@ namespace Assets.MyAssets.Scripts.UI
 
         private Coroutine currCor = null;
 
-        private void Start()
-        {
-            Setup();
-        }
-
+        private void Start() => Setup();
         private void Setup()
         {
-            title_menuBarSize = new MenuBarSize();
-            title_menuBarSize.beforeX = __TITLE_BEFORE_X;
-            title_menuBarSize.afterX = __TITLE_AFTER_X;
+            title_menuBarSize = new MenuBarSize
+            {
+                beforeX = __TITLE_BEFORE_X,
+                afterX = __TITLE_AFTER_X
+            };
 
-            game_menuBarSize = new MenuBarSize();
-            game_menuBarSize.beforeX = __GAME_BEFORE_X;
-            game_menuBarSize.afterX = __GAME_AFTER_X;
+            game_menuBarSize = new MenuBarSize
+            {
+                beforeX = __GAME_BEFORE_X,
+                afterX = __GAME_AFTER_X
+            };
 
             background.GetComponent<RectTransform>().sizeDelta =
                 new Vector2(__TITLE_BEFORE_X, background.GetComponent<RectTransform>().sizeDelta.y);
@@ -102,11 +99,11 @@ namespace Assets.MyAssets.Scripts.UI
                 currCor = StartCoroutine(IncreaseBar(currentScene.beforeX, currentScene.afterX));
             }
         }
-        public void PlaySound_Menu_Button_Press()
+        public void PlaySoundMenuButtonPress()
         {
             SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MENU_BUTTON_PRESS);
         }
-        public void PlaySound_Button_Press()
+        public void PlaySoundButtonPress()
         {
             SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.BUTTON_PRESS);
         }

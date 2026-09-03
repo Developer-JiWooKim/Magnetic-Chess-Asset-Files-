@@ -11,26 +11,19 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class GameDirector : Singleton<GameDirector>
     {
-        // GameScene에만 존재하고 씬과 함께 사라져야 하므로 DontDestroyOnLoad 대상이 아니다.
+        [SerializeField] private MagnetBallSpawner magnetBallSpawner;
+        [SerializeField] private MagnetWorld magnetWorld;
+        [SerializeField] private CameraView cameraView;
+        [SerializeField] private InGameUI_Manager inGameUI_Manager;
+        [SerializeField] private Result_Panel result_Panel;
+        [SerializeField] private AI_FSM aiFSM;
+        [SerializeField] private GameObject preventImage;
+
+        private List<Player> playerList = new();
+
         protected override bool IsPersistent => false;
 
-        [SerializeField]
-        private MagnetBallSpawner magnetBallSpawner;
-        [SerializeField]
-        private MagnetWorld magnetWorld;
-        [SerializeField]
-        private CameraView cameraView;
-        [SerializeField]
-        private InGameUI_Manager inGameUI_Manager;
-        [SerializeField]
-        private Result_Panel result_Panel;
-        [SerializeField]
-        private AI_FSM aiFSM;
-        [SerializeField]
-        private GameObject preventImage;
-
-        private List<Player> playerList = new List<Player>();
-
+        // consts
         private const int __PLAYER__1 = 0;
         private const int __PLAYER__2 = 1;
         private const int __TURN_INFINITY__ = 100;
@@ -54,10 +47,8 @@ namespace Assets.MyAssets.Scripts.Match
         private GameSetting currentSetting;
         public bool isPlaying { get; private set; }
 
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
+
         private void Update()
         {
             PlayerTouchScreen();
@@ -68,7 +59,6 @@ namespace Assets.MyAssets.Scripts.Match
             switch (gameState)
             {
                 case E_GameState.None:
-
                     BattleStart();
                     break;
                 case E_GameState.Player_1:
@@ -79,7 +69,6 @@ namespace Assets.MyAssets.Scripts.Match
 
                     if (currentSetting.gameMode == GameMode.AI)
                     {
-
                         isTouch = true;
 
                         Invoke(nameof(AI_SpawnAndStartTimer), 0.5f);
@@ -95,13 +84,11 @@ namespace Assets.MyAssets.Scripts.Match
             preventImage.SetActive(true);
             gameState = E_GameState.Player_1;
 
-
             cameraView.ChangeCameraView(cameraView.TopView_tr, () => preventImage.SetActive(false));
             GameFSM();
         }
         private void PlayerTouchScreen()
         {
-
             if (isPlaying == false)
             {
                 return;
@@ -185,7 +172,6 @@ namespace Assets.MyAssets.Scripts.Match
                 }
             }
 
-
             if (isPlaying == false)
             {
                 winPlayer = gameState;
@@ -195,7 +181,6 @@ namespace Assets.MyAssets.Scripts.Match
 
             else
             {
-
                 if (gameState == E_GameState.Player_2)
                 {
                     turnCount++;
@@ -207,16 +192,13 @@ namespace Assets.MyAssets.Scripts.Match
 
                 isTouch = false;
 
-
                 SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.CHANGE_TURN);
-
 
                 GameFSM();
             }
         }
         private void SpawnAndStartTimer()
         {
-
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
@@ -230,19 +212,14 @@ namespace Assets.MyAssets.Scripts.Match
                 Vector3 hitPos = hit.point;
                 hitPos.y = __SPAWN__POINT_Y;
 
-
                 magnetWorld.IsActive = true;
 
-
-                SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN); // ���� ���� ���
+                SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
                 magnetBallSpawner.SpawnMagnetBall(hitPos, Random.rotation);
-
 
                 CurrentTurnPieceDecrease(gameState);
 
-
                 int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
-
 
                 inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
             }
@@ -257,7 +234,6 @@ namespace Assets.MyAssets.Scripts.Match
 
         private void AI_SpawnAndStartTimer()
         {
-
             Vector3 aiSpawnPoint = aiFSM.AIMagnetBallSpawnPoint();
             aiSpawnPoint.y = __SPAWN__POINT_Y;
 
@@ -267,12 +243,9 @@ namespace Assets.MyAssets.Scripts.Match
             SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
             magnetBallSpawner.SpawnMagnetBall(aiSpawnPoint, Random.rotation);
 
-
             CurrentTurnPieceDecrease(gameState);
 
-
             int player_index = gameState == E_GameState.Player_1 ? __PLAYER__1 : __PLAYER__2;
-
 
             inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
 
@@ -309,7 +282,6 @@ namespace Assets.MyAssets.Scripts.Match
 
             if (currentSetting.gameMode == GameMode.AI)
             {
-
                 if (winPlayer == E_GameState.Player_2)
                 {
                     result_Panel.Result_Initialize("AI", turnCount);
@@ -330,40 +302,36 @@ namespace Assets.MyAssets.Scripts.Match
 
         private void Initialize_GameSettings()
         {
-
             // GameSetting은 struct라 여기서 값이 복사된다. 즉 이 시점 이후 GameManager 쪽 설정이
             // 바뀌어도 진행 중인 판에는 반영되지 않는다(판 시작 시점의 설정으로 끝까지 진행).
             currentSetting = GameManager.Instance.CurrentSetting;
-
 
             if (playerList != null)
             {
                 playerList.Clear();
             }
 
-
             int totalPieceCount = 0;
-
 
             switch (currentSetting.gameMode)
             {
                 case GameMode.OfflineMulti:
-
                     playerList.Add(new Player(PlayerName.Player_1));
                     playerList.Add(new Player(PlayerName.Player_2));
                     playerList.ForEach(player => totalPieceCount += player.PieceCount = currentSetting.pieceCount);
 
                     magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
                     break;
+
                 case GameMode.AI:
                     playerList.Add(new Player(PlayerName.Player_1));
                     playerList.Add(new Player(PlayerName.Player_AI));
                     totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_1).PieceCount = currentSetting.pieceCount;
                     totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_AI).PieceCount = currentSetting.pieceCount_AI;
 
-
                     magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
                     break;
+
                 case GameMode.OnlineMulti:
                     break;
             }
@@ -371,7 +339,6 @@ namespace Assets.MyAssets.Scripts.Match
 
         private int IncreasePieceCount()
         {
-
             int contactMagnetBallCount = 0;
             foreach (GameObject magnetBall in magnetBallSpawner.ActiveMagnetBalls)
             {
@@ -380,7 +347,6 @@ namespace Assets.MyAssets.Scripts.Match
                     contactMagnetBallCount++;
                 }
             }
-
 
             if (gameState == E_GameState.Player_1)
             {
@@ -393,6 +359,7 @@ namespace Assets.MyAssets.Scripts.Match
 
             return contactMagnetBallCount;
         }
+
         public void GamePlay()
         {
             isPlaying = true;
@@ -437,21 +404,17 @@ namespace Assets.MyAssets.Scripts.Match
 
             Initialize_GameSettings();
 
-
             magnetBallSpawner.DeactivateAllMagnetBall();
-
 
             if (currentSetting.gameMode == GameMode.AI)
             {
                 aiFSM.SpawnPoint_Initialize();
             }
 
-
             inGameUI_Manager.Show_All_Panel();
             inGameUI_Manager.Initialize_UI();
             inGameUI_Manager.Hide_All_Panel();
             inGameUI_Manager.Hide_TurnText();
-
 
             result_Panel.Hide();
 

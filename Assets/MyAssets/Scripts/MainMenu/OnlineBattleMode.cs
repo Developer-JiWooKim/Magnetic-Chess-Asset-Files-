@@ -9,10 +9,8 @@ namespace Assets.MyAssets.Scripts.MainMenu
         [SerializeField]
         private GameObject preparing;
 
-        public override void Setup()
-        {
-            isPreparing = true;
-        }
+        public override void Setup() => isPreparing = true;
+
         public override void PreparingMode()
         {
             if (IsPreparing == true)

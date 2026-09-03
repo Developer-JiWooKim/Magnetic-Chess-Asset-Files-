@@ -6,15 +6,12 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class StartPanel : Panel_Base
     {
-        [SerializeField]
-        private Animator animator_Camera;
+        [SerializeField] private Animator animator_Camera;
 
         private CanvasGroup canvasGroup;
 
-        private void Awake()
-        {
-            Setup();
-        }
+        private void Awake() => Setup();
+
         private void Setup()
         {
             canvasGroup = GetComponent<CanvasGroup>();

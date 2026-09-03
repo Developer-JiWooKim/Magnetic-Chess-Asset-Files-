@@ -14,17 +14,13 @@ namespace Assets.MyAssets.Scripts.MainMenu
 
     public sealed class Menu_Manager : MonoBehaviour
     {
-        [SerializeField]
-        private Tablet_Logic Tablet_UI;
+        [SerializeField] private Tablet_Logic Tablet_UI;
 
         private List<Panel_Base> panelList;
 
         public E_UI_Panel_Name currentName;
 
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
         private void Setup()
         {
             currentName = DontDestroy_Menu.Instance.CurrentScene == DontDestroy_Menu.SceneName.Title ? E_UI_Panel_Name.Start : E_UI_Panel_Name.ModeSelect;

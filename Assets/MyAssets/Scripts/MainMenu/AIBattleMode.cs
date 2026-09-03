@@ -6,13 +6,10 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class AIBattleMode : ModeBase
     {
-        [SerializeField]
-        private GameObject preparing;
+        [SerializeField] private GameObject preparing;
 
-        public override void Setup()
-        {
-            isPreparing = false;
-        }
+        public override void Setup() => isPreparing = false;
+
         public override void PreparingMode()
         {
             if (IsPreparing == true)

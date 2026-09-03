@@ -8,23 +8,16 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class GameSettingPanel : Panel_Base
     {
-        [SerializeField]
-        private GameObject PieceCount_AI_Option;
-        [SerializeField]
-        private GameObject fadeWindow;
-        [SerializeField]
-        private Animator animator_Camera;
-        [SerializeField]
-        private CanvasGroup canvasGroup;
+        [SerializeField] private GameObject PieceCount_AI_Option;
+        [SerializeField] private GameObject fadeWindow;
+        [SerializeField] private Animator animator_Camera;
+        [SerializeField] private CanvasGroup canvasGroup;
 
         private Coroutine runtimeCoroutine = null;
 
         private const float __FADE_TIME = 0.2f;
 
-        private void Start()
-        {
-            Setup();
-        }
+        private void Start() => Setup();
         private void Setup()
         {
             panel_Name = E_UI_Panel_Name.GameSetting;

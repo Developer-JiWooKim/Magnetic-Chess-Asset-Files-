@@ -4,8 +4,7 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class Camera_Animation_Event : MonoBehaviour
     {
-        [SerializeField]
-        private Tablet_Logic tablet_logic;
+        [SerializeField] private Tablet_Logic tablet_logic;
 
         public void Loading_UI_Show()
         {

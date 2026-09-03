@@ -23,17 +23,11 @@ namespace Assets.MyAssets.Scripts.Core
         /// <summary>
         /// currentScene -> Game
         /// </summary>
-        public void ChangeGameScene()
-        {
-            currentScene = SceneName.Game;
-        }
+        public void ChangeGameScene() => currentScene = SceneName.Game;
 
         /// <summary>
         /// currentScene -> Title
         /// </summary>
-        public void ChangeTitleScene()
-        {
-            currentScene = SceneName.Title;
-        }
+        public void ChangeTitleScene() => currentScene = SceneName.Title;
     }
 }

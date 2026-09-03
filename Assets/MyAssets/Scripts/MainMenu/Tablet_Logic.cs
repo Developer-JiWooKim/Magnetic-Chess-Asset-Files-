@@ -5,17 +5,13 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class Tablet_Logic : MonoBehaviour
     {
-        [SerializeField]
-        private GameObject loading_UI;
+        [SerializeField] private GameObject loading_UI;
 
-        [SerializeField]
-        private GameObject select_UI;
+        [SerializeField] private GameObject select_UI;
 
-        [SerializeField]
-        private GameObject setting_UI;
+        [SerializeField] private GameObject setting_UI;
 
-        [SerializeField]
-        private ModeSelectPanel modeSelectPanel;
+        [SerializeField] private ModeSelectPanel modeSelectPanel;
 
         private IEnumerator Switching_Select_after_loading()
         {

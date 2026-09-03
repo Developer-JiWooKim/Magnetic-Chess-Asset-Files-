@@ -10,7 +10,7 @@ namespace Assets.MyAssets.Scripts.Magnet
         /// 각 Magnet이 스스로 등록/해제한다. 비활성 오브젝트는 들어가지 않으므로
         /// 기존 FindObjectsOfType&lt;Magnet&gt;()과 동일한 집합이 된다.
         /// </summary>
-        private static readonly List<Magnet> activeMagnets = new List<Magnet>();
+        private static readonly List<Magnet> activeMagnets = new();
         public static IReadOnlyList<Magnet> ActiveMagnets => activeMagnets;
 
         public enum Pole
@@ -26,9 +26,6 @@ namespace Assets.MyAssets.Scripts.Magnet
         private void OnEnable() => activeMagnets.Add(this);
         private void OnDisable() => activeMagnets.Remove(this);
 
-        void OnDrawGizmos()
-        {
-
-        }
+        void OnDrawGizmos() { }
     }
 }

@@ -10,14 +10,12 @@ namespace Assets.MyAssets.Scripts.UI
         public static float fadeTime = 0.5f;
         public static IEnumerator FadeIn_CanvasGroup(CanvasGroup canvasGroup, float _FadeInTime = 0.5f, Action action = null)
         {
-            Debug.Log(canvasGroup != null);
             float currentTime = 0.0f;
             float percent = 0.0f;
 
             canvasGroup.alpha = 0.0f;
             canvasGroup.blocksRaycasts = false;
 
-            Debug.Log("1-3");
             while (percent < 1f)
             {
                 currentTime += Time.deltaTime;

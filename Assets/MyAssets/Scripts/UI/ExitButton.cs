@@ -1,6 +1,4 @@
 namespace Assets.MyAssets.Scripts.UI
 {
-    public sealed class ExitButton : UIPanel
-    {
-    }
+    public sealed class ExitButton : UIPanel { }
 }

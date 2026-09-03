@@ -23,47 +23,42 @@ namespace Assets.MyAssets.Scripts.Core
             GAME,
         }
 
-        [SerializeField]
-        private AudioClip[] bgm = null;
-        [SerializeField]
-        private AudioClip[] sfx = null;
+        [SerializeField] private AudioClip[] bgm = null;
+        [SerializeField] private AudioSource bgm_Player = null;
+        [SerializeField] private AudioClip[] sfx = null;
+        [SerializeField] private AudioSource[] sfx_Player = null;
 
-        [SerializeField]
-        private AudioSource bgm_Player = null;
-        [SerializeField]
-        private AudioSource[] sfx_Player = null;
-
+        // const
         private const float __DEFAULT_VOLUME_VALUE = 0.5f;
 
-        void Start()
-        {
-            Setup();
-        }
+        void Start() => Setup();
         private void Setup()
         {
-            {
-                bgm_Player.playOnAwake = true;
-                bgm_Player.loop = true;
-                Play_BGM(E_BGM_Name.TITLE);
+            bgm_Player.playOnAwake = true;
+            bgm_Player.loop = true;
+            Play_BGM(E_BGM_Name.TITLE);
 
-                SetVolume_BGM(DataManager.Instance.data.volume_value_BGM);
-                SetVolume_SFX(DataManager.Instance.data.volume_value_SFX);
-            }
+            SetVolume_BGM(DataManager.Instance.data.volume_value_BGM);
+            SetVolume_SFX(DataManager.Instance.data.volume_value_SFX);
         }
+
         public void SetDefaultVolume()
         {
             SetVolume_BGM(__DEFAULT_VOLUME_VALUE);
             SetVolume_SFX(__DEFAULT_VOLUME_VALUE);
         }
+
         public void Play_BGM(E_BGM_Name bgm_Name)
         {
             bgm_Player.clip = bgm[(int)bgm_Name];
             bgm_Player.Play();
         }
+
         public void SetVolume_BGM(float _volume)
         {
             bgm_Player.volume = _volume;
         }
+
         public void SetVolume_SFX(float _volume)
         {
             for (int i = 0; i < sfx_Player.Length; i++)
@@ -71,10 +66,12 @@ namespace Assets.MyAssets.Scripts.Core
                 sfx_Player[i].volume = _volume;
             }
         }
+
         public void Stop_BGM()
         {
             bgm_Player.Stop();
         }
+
         public void Play_SFX(E_SFX_Name sfx_Name)
         {
             for (int j = 0; j < sfx_Player.Length; j++)

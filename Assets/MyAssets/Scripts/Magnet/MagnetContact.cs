@@ -6,17 +6,13 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetContact : MonoBehaviour
     {
-        [SerializeField]
-        private bool isContact;
+        [SerializeField] private bool isContact;
 
         public bool IsContact => isContact;
 
         public GameObject spawnPoint;
 
-        private void Awake()
-        {
-            Setup();
-        }
+        private void Awake() => Setup();
 
         private void Setup()
         {

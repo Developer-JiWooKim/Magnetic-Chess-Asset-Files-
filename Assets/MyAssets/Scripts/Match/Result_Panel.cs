@@ -6,10 +6,8 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class Result_Panel : UIPanel
     {
-        [SerializeField]
-        private TextMeshProUGUI winPlayerText;
-        [SerializeField]
-        private TextMeshProUGUI endTurnText;
+        [SerializeField] private TextMeshProUGUI winPlayerText;
+        [SerializeField] private TextMeshProUGUI endTurnText;
 
         private ResumePanel resumePanel;
         private ExitPanel exitPanel;
