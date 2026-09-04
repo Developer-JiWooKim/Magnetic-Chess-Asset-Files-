@@ -78,6 +78,7 @@ namespace Assets.MyAssets.Scripts.AI
 
             return emptyPointsTransform[index].position;
         }
+
         private void Search_Close_MagnetBall(float range)
         {
             final_index.Clear();
