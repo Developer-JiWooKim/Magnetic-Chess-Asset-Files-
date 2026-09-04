@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Assets.MyAssets.Scripts.Magnet;
 
@@ -9,7 +8,7 @@ namespace Assets.MyAssets.Scripts.AI
     {
         [SerializeField] private GameObject magnetBallSpawnPoints;
 
-        private List<MagnetBallSpawnPoint> spawnPointList;
+        private MagnetBallSpawnPoint[] spawnPointList;
 
         private List<Transform> emptyPointsTransform = new();
         private List<Transform> notEmptyPointsTransform = new();
@@ -19,24 +18,29 @@ namespace Assets.MyAssets.Scripts.AI
         private void Awake() => Setup();
         private void Setup()
         {
-            spawnPointList = magnetBallSpawnPoints.GetComponentsInChildren<MagnetBallSpawnPoint>().ToList();
+            spawnPointList = magnetBallSpawnPoints.GetComponentsInChildren<MagnetBallSpawnPoint>();
         }
 
         private void CheckSpawnPoints()
         {
             emptyPointsTransform.Clear();
             notEmptyPointsTransform.Clear();
-            spawnPointList.ForEach(point =>
+
+            for (int i = 0; i < spawnPointList.Length; i++)
             {
+                MagnetBallSpawnPoint point = spawnPointList[i];
+
+                // 예전에는 point.gameObject.GetComponent<Transform>().transform 이었는데,
+                // GetComponent<Transform>()도 .transform도 같은 것을 가리키므로 point.transform이면 된다.
                 if (point.IsEmpty)
                 {
-                    emptyPointsTransform.Add(point.gameObject.GetComponent<Transform>().transform);
+                    emptyPointsTransform.Add(point.transform);
                 }
                 else
                 {
-                    notEmptyPointsTransform.Add(point.gameObject.GetComponent<Transform>().transform);
+                    notEmptyPointsTransform.Add(point.transform);
                 }
-            });
+            }
         }
 
         private Vector3 DecideSpawnPoint()
@@ -108,7 +112,10 @@ namespace Assets.MyAssets.Scripts.AI
 
         public void SpawnPoint_Initialize()
         {
-            spawnPointList.ForEach(point => point.Initialize());
+            for (int i = 0; i < spawnPointList.Length; i++)
+            {
+                spawnPointList[i].Initialize();
+            }
         }
 
         public Vector3 AIMagnetBallSpawnPoint()

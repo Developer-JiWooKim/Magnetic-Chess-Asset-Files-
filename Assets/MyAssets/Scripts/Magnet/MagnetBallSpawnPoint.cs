@@ -13,7 +13,11 @@ namespace Assets.MyAssets.Scripts.Magnet
             if (other.CompareTag("Magnet"))
             {
                 isEmpty = false;
-                other.gameObject.GetComponent<MagnetContact>().spawnPoint = this.gameObject;
+
+                if (other.TryGetComponent(out MagnetContact magnetContact))
+                {
+                    magnetContact.spawnPoint = this;
+                }
             }
         }
         private void OnTriggerExit(Collider other)

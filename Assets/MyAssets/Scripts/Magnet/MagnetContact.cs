@@ -10,7 +10,11 @@ namespace Assets.MyAssets.Scripts.Magnet
 
         public bool IsContact => isContact;
 
-        public GameObject spawnPoint;
+        /// <summary>
+        /// 이 자석볼이 올라가 있는 스폰 지점. GameObject로 들고 있으면 해제할 때마다
+        /// GetComponent가 필요해서 컴포넌트 타입 그대로 참조한다.
+        /// </summary>
+        public MagnetBallSpawnPoint spawnPoint;
 
         private void Awake() => Setup();
         private void Setup()
@@ -29,9 +33,7 @@ namespace Assets.MyAssets.Scripts.Magnet
             if (collision.collider.CompareTag("Magnet"))
             {
                 // 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.
-                // TODO#: / 2 보다는 * 0.5f 가 더 낫지 않나?
-                GameDirector.Instance.ExtendConfirmTime(GameManager.Instance.CurrentSetting.waitingTime / 2);
-
+                GameDirector.Instance.ExtendConfirmTime(GameManager.Instance.CurrentSetting.waitingTime * 0.5f);
 
                 isContact = true;
             }
@@ -41,7 +43,7 @@ namespace Assets.MyAssets.Scripts.Magnet
         {
             if (spawnPoint != null)
             {
-                spawnPoint.GetComponent<MagnetBallSpawnPoint>().ChangeIsEmpty();
+                spawnPoint.ChangeIsEmpty();
             }
             isContact = false;
         }

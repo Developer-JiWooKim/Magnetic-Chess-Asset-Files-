@@ -42,6 +42,40 @@ namespace Assets.MyAssets.Scripts.Match
         private GameSetting currentSetting;
         public bool isPlaying { get; private set; }
 
+        /// <summary>
+        /// 터치할 때마다 Camera.main 조회와 LayerMask.NameToLayer 문자열 조회를 반복하지 않도록
+        /// 한 번만 구해 둔다. 결과 패널 CanvasGroup도 판이 끝날 때마다 찾을 이유가 없다.
+        /// </summary>
+        private Camera mainCamera;
+        private int spawnRaycastLayerMask;
+        private CanvasGroup result_Panel_CanvasGroup;
+
+        /// <summary>
+        /// 캐싱해 두되, 어떤 이유로든 비어 있으면 그때 한 번 더 찾는다.
+        /// (예전에는 클릭할 때마다 Camera.main을 조회했다.)
+        /// </summary>
+        private Camera MainCamera
+        {
+            get
+            {
+                if (mainCamera == null)
+                {
+                    mainCamera = Camera.main;
+                }
+                return mainCamera;
+            }
+        }
+
+        // Singleton<T>.Awake가 인스턴스 등록과 중복 제거를 하므로 반드시 먼저 호출한다.
+        protected override void Awake()
+        {
+            base.Awake();
+
+            mainCamera = Camera.main;
+            spawnRaycastLayerMask = (-1) - (1 << LayerMask.NameToLayer("SpawnPoint"));
+            result_Panel_CanvasGroup = result_Panel.GetComponent<CanvasGroup>();
+        }
+
         private void Start() => Setup();
 
         private void Update()
@@ -129,14 +163,14 @@ namespace Assets.MyAssets.Scripts.Match
 
             if (isContact)
             {
-                // 반납하면 ActiveMagnetBalls가 줄어들므로 뒤에서부터 순회한다.
-                IReadOnlyList<GameObject> activeMagnetBalls = magnetBallSpawner.ActiveMagnetBalls;
-                for (int i = activeMagnetBalls.Count - 1; i >= 0; i--)
+                // 반납하면 목록이 줄어들므로 뒤에서부터 순회한다.
+                IReadOnlyList<MagnetContact> activeMagnetContacts = magnetBallSpawner.ActiveMagnetContacts;
+                for (int i = activeMagnetContacts.Count - 1; i >= 0; i--)
                 {
-                    GameObject magnetBall = activeMagnetBalls[i];
-                    if (magnetBall.GetComponent<MagnetContact>().IsContact)
+                    MagnetContact magnetContact = activeMagnetContacts[i];
+                    if (magnetContact.IsContact)
                     {
-                        magnetBallSpawner.DeactivateMagnetBall(magnetBall);
+                        magnetBallSpawner.DeactivateMagnetBall(magnetContact.gameObject);
                     }
                 }
             }
@@ -182,12 +216,9 @@ namespace Assets.MyAssets.Scripts.Match
         }
         private void SpawnAndStartTimer()
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
+            Ray ray = MainCamera.ScreenPointToRay(Input.mousePosition);
 
-            int layerMask = (-1) - (1 << LayerMask.NameToLayer("SpawnPoint"));
-
-            bool isHit = Physics.Raycast(ray, out hit, 100f, layerMask);
+            bool isHit = Physics.Raycast(ray, out RaycastHit hit, 100f, spawnRaycastLayerMask);
 
 
             if (isHit && hit.collider.CompareTag("Board"))
@@ -257,7 +288,7 @@ namespace Assets.MyAssets.Scripts.Match
 
             result_Panel.Result_Initialize(GetWinnerDisplayName(), turnState.TurnCount);
 
-            StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(result_Panel.gameObject.GetComponent<CanvasGroup>(), .3f));
+            StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(result_Panel_CanvasGroup, .3f));
         }
 
         private void Initialize_GameSettings()
@@ -329,9 +360,11 @@ namespace Assets.MyAssets.Scripts.Match
         private int IncreasePieceCount()
         {
             int contactMagnetBallCount = 0;
-            foreach (GameObject magnetBall in magnetBallSpawner.ActiveMagnetBalls)
+
+            IReadOnlyList<MagnetContact> activeMagnetContacts = magnetBallSpawner.ActiveMagnetContacts;
+            for (int i = 0; i < activeMagnetContacts.Count; i++)
             {
-                if (magnetBall.GetComponent<MagnetContact>().IsContact)
+                if (activeMagnetContacts[i].IsContact)
                 {
                     contactMagnetBallCount++;
                 }

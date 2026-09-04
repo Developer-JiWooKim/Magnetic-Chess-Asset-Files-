@@ -17,6 +17,13 @@ namespace Assets.MyAssets.Scripts.Magnet
         private readonly List<GameObject> activeMagnetBalls = new();
         public IReadOnlyList<GameObject> ActiveMagnetBalls => activeMagnetBalls;
 
+        /// <summary>
+        /// 위 목록과 같은 순서로 유지되는 MagnetContact 캐시. 턴이 끝날 때마다 자석볼 전체를
+        /// 훑으며 GetComponent를 부르지 않도록, 풀에서 꺼낼 때 한 번만 찾아 둔다.
+        /// </summary>
+        private readonly List<MagnetContact> activeMagnetContacts = new();
+        public IReadOnlyList<MagnetContact> ActiveMagnetContacts => activeMagnetContacts;
+
         private void Awake()
         {
             pool = new ObjectPool<GameObject>(
@@ -29,12 +36,20 @@ namespace Assets.MyAssets.Scripts.Magnet
         private void OnGetMagnetBall(GameObject magnetBall)
         {
             activeMagnetBalls.Add(magnetBall);
+            activeMagnetContacts.Add(magnetBall.GetComponent<MagnetContact>());
+
             magnetBall.SetActive(true);
         }
 
         private void OnReleaseMagnetBall(GameObject magnetBall)
         {
-            activeMagnetBalls.Remove(magnetBall);
+            // 두 목록은 같은 순서를 유지해야 하므로 인덱스를 찾아 함께 지운다.
+            int index = activeMagnetBalls.IndexOf(magnetBall);
+            if (index >= 0)
+            {
+                activeMagnetBalls.RemoveAt(index);
+                activeMagnetContacts.RemoveAt(index);
+            }
 
             magnetBall.transform.position = Vector3.zero;
             magnetBall.SetActive(false);
