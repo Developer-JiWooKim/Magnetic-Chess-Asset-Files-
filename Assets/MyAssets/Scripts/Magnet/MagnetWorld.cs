@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,32 +13,50 @@ namespace Assets.MyAssets.Scripts.Magnet
 
         private float minMagnetForce = 5.0f;
 
+        private const float FourPi = 4.0f * Mathf.PI;
+
+        /// <summary>
+        /// 두 자석이 완전히 겹쳤을 때 0으로 나눠 NaN이 물리에 들어가는 것을 막는 최소 거리(제곱).
+        /// </summary>
+        private const float MinSqrDistance = 0.0001f;
+
+        /// <summary>
+        /// transform.position / transform.parent는 네이티브 호출이라 O(n^2) 루프 안에서 읽으면
+        /// 쌍마다 비용이 붙는다. FixedUpdate 시작에 한 번만 모아 두고 루프는 이 배열만 본다.
+        /// 한 물리 프레임 안에서는 트랜스폼이 움직이지 않으므로 값은 동일하다.
+        /// </summary>
+        private Vector3[] cachedPositions = Array.Empty<Vector3>();
+        private Transform[] cachedParents = Array.Empty<Transform>();
+
         private void Start() => Setup();
         private void Setup()
         {
             IsActive = false;
         }
 
-        private Vector3 CalculateGilbertForce(Magnet magnet1, Magnet magnet2)
+        /// <summary>
+        /// 길버트 힘. 원래는 |F| = μ·m1·m2 / (4π·d)를 구한 뒤 dir/d로 방향을 곱했는데,
+        /// 두 식을 합치면 F = μ·m1·m2·dir / (4π·d²)이 되어 magnitude/normalized의 sqrt 두 번 없이
+        /// sqrMagnitude만으로 같은 값을 얻는다.
+        /// </summary>
+        private Vector3 CalculateGilbertForce(Magnet magnet1, Vector3 m1_Pos, Magnet magnet2, Vector3 m2_Pos)
         {
-            Vector3 m1_Pos = magnet1.transform.position;
-            Vector3 m2_Pos = magnet2.transform.position;
-
             Vector3 dir = m2_Pos - m1_Pos;
 
-            float distance = dir.magnitude;
+            float sqrDistance = Mathf.Max(dir.sqrMagnitude, MinSqrDistance);
 
-            float part0 = Permeability * magnet1.MagnetForce * magnet2.MagnetForce;
-            float part1 = 4 * Mathf.PI * distance;
+            float magnetForce = magnet1.MagnetForce * magnet2.MagnetForce;
 
-            float force = part0 / part1;
+            // 기존 코드가 (μ·m1·m2 / 4πd)·(dir/d)를 구한 뒤 다시 m1·m2를 곱했기 때문에
+            // 자력이 제곱으로 들어간다. 동작을 바꾸지 않으려고 그대로 유지한다.
+            float scale = Permeability * magnetForce * magnetForce / (FourPi * sqrDistance);
 
             if (magnet1.MagneticPole == magnet2.MagneticPole)
             {
-                force = -force;
+                scale = -scale;
             }
 
-            return force * dir.normalized;
+            return scale * dir;
         }
 
         private void FixedUpdate()
@@ -48,8 +67,30 @@ namespace Assets.MyAssets.Scripts.Magnet
             }
 
             IReadOnlyList<Magnet> magnets = Magnet.ActiveMagnets;
+            int count = magnets.Count;
 
-            for (int i = 0; i < magnets.Count; i++)
+            if (count < 2)
+            {
+                return;
+            }
+
+            if (cachedPositions.Length < count)
+            {
+                cachedPositions = new Vector3[count];
+                cachedParents = new Transform[count];
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                Transform magnetTransform = magnets[i].transform;
+
+                cachedPositions[i] = magnetTransform.position;
+                cachedParents[i] = magnetTransform.parent;
+            }
+
+            float maxForceSqr = MaxForce * MaxForce;
+
+            for (int i = 0; i < count; i++)
             {
                 Magnet magnet_1 = magnets[i];
                 if (magnet_1.RigidBody == null)
@@ -57,11 +98,12 @@ namespace Assets.MyAssets.Scripts.Magnet
                     continue;
                 }
 
-                Rigidbody magnetRigidbody = magnet_1.RigidBody;
+                Vector3 magnet_1_Pos = cachedPositions[i];
+                Transform magnet_1_Parent = cachedParents[i];
 
                 Vector3 accF = Vector3.zero;
 
-                for (int j = 0; j < magnets.Count; j++)
+                for (int j = 0; j < count; j++)
                 {
                     if (i == j)
                     {
@@ -75,23 +117,20 @@ namespace Assets.MyAssets.Scripts.Magnet
                         continue;
                     }
 
-                    if (magnet_1.transform.parent == magnet_2.transform.parent)
+                    if (magnet_1_Parent == cachedParents[j])
                     {
                         continue;
                     }
 
-                    Vector3 force = CalculateGilbertForce(magnet_1, magnet_2);
-                    float magnetForce = magnet_1.MagnetForce * magnet_2.MagnetForce;
-
-                    accF += force * magnetForce;
+                    accF += CalculateGilbertForce(magnet_1, magnet_1_Pos, magnet_2, cachedPositions[j]);
                 }
 
-                if (accF.magnitude > MaxForce)
+                if (accF.sqrMagnitude > maxForceSqr)
                 {
                     accF = accF.normalized * MaxForce;
                 }
 
-                magnetRigidbody.AddForceAtPosition(accF, magnet_1.transform.position);
+                magnet_1.RigidBody.AddForceAtPosition(accF, magnet_1_Pos);
             }
         }
     }

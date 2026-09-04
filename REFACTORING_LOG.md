@@ -1179,4 +1179,260 @@ public void FinishWith(E_GameState winner) { WinPlayer = winner; Current = E_Gam
 
 ---
 
+## 2026-09-04 — 자석 물리 연산 최적화 (MagnetWorld.FixedUpdate)
+
+### ① 문제 상황
+
+프로젝트 전반의 최적화 지점을 점검한 결과, **런타임 비용이 `MagnetWorld.FixedUpdate` 한 곳에 압도적으로 몰려** 있었다. 나머지(GC 할당, `GetComponent` 반복 등)는 상대적으로 사소했다.
+
+이 루프는 활성 자석볼 n개에 대해 **매 물리 프레임(초 50회) O(n²) 순회**를 돈다. 자석볼이 40개면 1600쌍 × 50 = **초당 8만 회**의 쌍 계산이다. 그런데 그 안에서 쌍마다 다음이 낭비되고 있었다:
+
+- **sqrt 2회** — `dir.magnitude`로 거리를 구하고, 다시 `dir.normalized`로 방향을 구하면서 내부에서 또 한 번
+- **네이티브 호출 6회** — `transform.position` 4회 + `transform.parent` 2회. C#에서 C++ 엔진으로 넘어가는 호출이라 일반 필드 접근보다 훨씬 비싸다
+- **0거리 방어 없음** — 두 자석이 완전히 겹치면 `distance = 0` → `0/0` → **NaN이 Rigidbody로 유입되어 물리가 폭주**
+
+### ② 이전 코드
+
+```csharp
+private Vector3 CalculateGilbertForce(Magnet magnet1, Magnet magnet2)
+{
+    Vector3 m1_Pos = magnet1.transform.position;   // 네이티브 호출
+    Vector3 m2_Pos = magnet2.transform.position;   // 네이티브 호출
+
+    Vector3 dir = m2_Pos - m1_Pos;
+
+    float distance = dir.magnitude;                // sqrt ①
+
+    float part0 = Permeability * magnet1.MagnetForce * magnet2.MagnetForce;
+    float part1 = 4 * Mathf.PI * distance;
+
+    float force = part0 / part1;
+
+    if (magnet1.MagneticPole == magnet2.MagneticPole)
+    {
+        force = -force;
+    }
+
+    return force * dir.normalized;                 // sqrt ②
+}
+
+private void FixedUpdate()
+{
+    if (IsActive == false) { return; }
+
+    IReadOnlyList<Magnet> magnets = Magnet.ActiveMagnets;
+
+    for (int i = 0; i < magnets.Count; i++)
+    {
+        Magnet magnet_1 = magnets[i];
+        if (magnet_1.RigidBody == null) { continue; }
+
+        Rigidbody magnetRigidbody = magnet_1.RigidBody;
+
+        Vector3 accF = Vector3.zero;
+
+        for (int j = 0; j < magnets.Count; j++)
+        {
+            if (i == j) { continue; }
+
+            Magnet magnet_2 = magnets[j];
+
+            if (magnet_2.MagnetForce < minMagnetForce) { continue; }
+
+            // 네이티브 호출 2회 — 매 쌍마다
+            if (magnet_1.transform.parent == magnet_2.transform.parent) { continue; }
+
+            Vector3 force = CalculateGilbertForce(magnet_1, magnet_2);
+            float magnetForce = magnet_1.MagnetForce * magnet_2.MagnetForce;
+
+            accF += force * magnetForce;
+        }
+
+        if (accF.magnitude > MaxForce)             // sqrt ③
+        {
+            accF = accF.normalized * MaxForce;
+        }
+
+        magnetRigidbody.AddForceAtPosition(accF, magnet_1.transform.position);  // 네이티브 호출
+    }
+}
+```
+
+### ③ 변경 후 코드
+
+**(a) sqrt 제거 — 수식을 합쳐서 `sqrMagnitude` 하나로**
+
+두 단계로 나뉘어 있던 계산을 하나로 정리하면 sqrt가 아예 사라진다.
+
+```
+기존:  |F| = μ·m1·m2 / (4π·d)  를 구한 뒤,  방향 dir/d 를 곱함
+       →  F = (μ·m1·m2 / 4π·d) · (dir/d)
+
+정리:  F = μ·m1·m2·dir / (4π·d²)      ← d²는 sqrMagnitude, sqrt 불필요
+```
+
+```csharp
+private const float FourPi = 4.0f * Mathf.PI;
+
+/// <summary>
+/// 두 자석이 완전히 겹쳤을 때 0으로 나눠 NaN이 물리에 들어가는 것을 막는 최소 거리(제곱).
+/// </summary>
+private const float MinSqrDistance = 0.0001f;
+
+/// <summary>
+/// 길버트 힘. 원래는 |F| = μ·m1·m2 / (4π·d)를 구한 뒤 dir/d로 방향을 곱했는데,
+/// 두 식을 합치면 F = μ·m1·m2·dir / (4π·d²)이 되어 magnitude/normalized의 sqrt 두 번 없이
+/// sqrMagnitude만으로 같은 값을 얻는다.
+/// </summary>
+private Vector3 CalculateGilbertForce(Magnet magnet1, Vector3 m1_Pos, Magnet magnet2, Vector3 m2_Pos)
+{
+    Vector3 dir = m2_Pos - m1_Pos;
+
+    float sqrDistance = Mathf.Max(dir.sqrMagnitude, MinSqrDistance);   // ← (e) 0거리 방어
+
+    float magnetForce = magnet1.MagnetForce * magnet2.MagnetForce;
+
+    // 기존 코드가 (μ·m1·m2 / 4πd)·(dir/d)를 구한 뒤 다시 m1·m2를 곱했기 때문에
+    // 자력이 제곱으로 들어간다. 동작을 바꾸지 않으려고 그대로 유지한다.
+    float scale = Permeability * magnetForce * magnetForce / (FourPi * sqrDistance);
+
+    if (magnet1.MagneticPole == magnet2.MagneticPole)
+    {
+        scale = -scale;
+    }
+
+    return scale * dir;
+}
+```
+
+**(c) 네이티브 호출을 O(n²) → O(n)으로 — 루프 진입 전 캐싱**
+
+```csharp
+/// <summary>
+/// transform.position / transform.parent는 네이티브 호출이라 O(n^2) 루프 안에서 읽으면
+/// 쌍마다 비용이 붙는다. FixedUpdate 시작에 한 번만 모아 두고 루프는 이 배열만 본다.
+/// 한 물리 프레임 안에서는 트랜스폼이 움직이지 않으므로 값은 동일하다.
+/// </summary>
+private Vector3[] cachedPositions = Array.Empty<Vector3>();
+private Transform[] cachedParents = Array.Empty<Transform>();
+
+private void FixedUpdate()
+{
+    if (IsActive == false) { return; }
+
+    IReadOnlyList<Magnet> magnets = Magnet.ActiveMagnets;
+    int count = magnets.Count;
+
+    if (count < 2) { return; }
+
+    // 필드로 재사용 — 프레임당 할당 없음. 필요할 때만 늘어난다.
+    if (cachedPositions.Length < count)
+    {
+        cachedPositions = new Vector3[count];
+        cachedParents = new Transform[count];
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        Transform magnetTransform = magnets[i].transform;
+
+        cachedPositions[i] = magnetTransform.position;
+        cachedParents[i] = magnetTransform.parent;
+    }
+
+    float maxForceSqr = MaxForce * MaxForce;
+
+    for (int i = 0; i < count; i++)
+    {
+        Magnet magnet_1 = magnets[i];
+        if (magnet_1.RigidBody == null) { continue; }
+
+        Vector3 magnet_1_Pos = cachedPositions[i];
+        Transform magnet_1_Parent = cachedParents[i];
+
+        Vector3 accF = Vector3.zero;
+
+        for (int j = 0; j < count; j++)
+        {
+            if (i == j) { continue; }
+
+            Magnet magnet_2 = magnets[j];
+
+            if (magnet_2.MagnetForce < minMagnetForce) { continue; }
+
+            if (magnet_1_Parent == cachedParents[j]) { continue; }   // 배열 참조 비교
+
+            accF += CalculateGilbertForce(magnet_1, magnet_1_Pos, magnet_2, cachedPositions[j]);
+        }
+
+        if (accF.sqrMagnitude > maxForceSqr)      // ← sqrt 하나 더 제거
+        {
+            accF = accF.normalized * MaxForce;
+        }
+
+        magnet_1.RigidBody.AddForceAtPosition(accF, magnet_1_Pos);
+    }
+}
+```
+
+### ④ 판단 근거
+
+**왜 sqrt 제거가 가장 큰가.** 이 코드의 특성은 "무거운 연산 하나"가 아니라 "가벼운 연산 × 8만 회"다. 이런 형태에서는 쌍당 상수 비용을 줄이는 것이 곧 전체 비용을 줄이는 것이다. sqrt는 부동소수점 연산 중에서도 비싼 축이고, 그게 쌍마다 3회(쌍 계산 2회 + 클램프 1회) 있었다. 게다가 **알고리즘을 바꾸는 것이 아니라 같은 수식을 다르게 쓰는 것뿐**이라 결과가 수학적으로 동일하다 — 위험 없이 얻는 이득이다.
+
+**왜 캐싱이 필요한가.** `transform.position`은 필드처럼 보이지만 실제로는 C#에서 C++ 엔진으로 넘어가는 프로퍼티 호출이다. 루프 안에 있으면 n²에 비례해 늘어나는데, **한 물리 프레임 안에서는 트랜스폼이 움직이지 않으므로 매번 읽을 이유가 없다.** 값이 변할 수 없다는 것이 캐싱의 안전성 근거다.
+
+**캐싱 배열을 지역 변수가 아니라 필드로 둔 이유.** `FixedUpdate`는 초 50회 호출된다. 여기서 배열을 새로 할당하면 최적화하려던 GC 부담을 오히려 늘린다. 필드로 재사용하고 `Length < count`일 때만 키우면 정상 상태에서 할당이 0이 된다.
+
+**0거리 방어를 이번에 같이 넣은 이유.** `sqrMagnitude` 방식으로 바꾸면 분모가 `d`에서 `d²`로 바뀌는데, 0 근처에서 발산이 더 가팔라진다. 원래도 있던 잠재 결함이지만 수식을 건드리는 김에 막는 것이 맞다고 판단했다. `Mathf.Max`로 클램프하면 `dir`이 정확히 0일 때 `0 * scale = 0`이 되어 NaN 대신 0이 나오고, 그 외에는 `MaxForce` 클램프가 이미 상한을 잡아준다.
+
+**의도적으로 하지 않은 것 — 쌍 대칭화(계산량 절반).** 뉴턴 제3법칙상 `F(j→i) = -F(i→j)`이므로 `j = i+1`부터 돌며 양쪽에 ±로 누적하면 계산량이 정확히 절반이 된다. 그러나 **기존 필터가 비대칭이라 그냥 접으면 동작이 바뀐다**:
+
+- `MagnetForce < minMagnetForce` 조건이 `magnet_2`에만 적용된다 → 약한 자석은 남을 끌지 못하지만 남에게는 끌린다
+- `RigidBody == null`인 자석은 힘을 받지 않지만 남에게 힘은 준다
+
+이 비대칭이 의도인지 실수인지 확정하지 않은 채 대칭화하면 물리 결과가 달라진다. **최적화 커밋에서 동작을 바꾸지 않는다**는 원칙에 따라 이번 범위에서 제외했다.
+
+**의도적으로 건드리지 않은 것 — 자력이 제곱으로 들어가는 문제.** `part0`에 이미 `MagnetForce1 × MagnetForce2`가 들어 있는데 호출부에서 `magnetForce`를 **한 번 더 곱하고** 있었다. 결과적으로 힘이 `(m1·m2)²`에 비례한다. 물리적으로는 명백히 이상하지만, 이 값이 이미 게임 밸런스에 녹아 있다 — 고치는 순간 자석이 붙는 감각이 전부 바뀐다. **버그인지 튜닝 결과인지 확정되기 전까지는 유지**하고, 대신 주석으로 "여기 제곱이 있다"는 사실을 명시해 다음에 읽는 사람이 실수로 지나치지 않게 했다.
+
+### ⑤ 결과
+
+**성능**
+
+| 항목 | 이전 (쌍당) | 이후 (쌍당) |
+|---|---|---|
+| sqrt 호출 | 2회 (+ 자석당 1회) | **0회** |
+| `transform.position` | 4회 | **0회** (자석당 1회로 이동) |
+| `transform.parent` | 2회 | **0회** (자석당 1회로 이동) |
+
+네이티브 호출이 **O(n²) → O(n)**으로 떨어졌다. n=40 기준 프레임당 약 9,600회 → 80회.
+
+**검증**
+
+1. **수식 등가성 (수치 검증).** 옛 식과 새 식을 C# `float` 연산으로 랜덤 20만 쌍에 대해 비교 → **최대 상대오차 `3.9e-07`**. float 엡실론(1.19e-07)의 몇 배 수준이므로 누적 반올림 오차일 뿐, 두 식은 동일하다.
+2. **컴파일 검증.** 독립 검증 프로젝트로 `Assets/MyAssets/Scripts/**` 전체 빌드 → **오류 0개**. 우리 소스 파일에서 나온 경고가 로그에 실제로 찍히는 것을 확인해 "빌드 대상에서 조용히 제외되는" 함정을 배제했다.
+3. **플레이 테스트.** Unity 에디터에서 실제 플레이 — **자석볼이 붙는 조작감이 이전과 구분되지 않음.** 최적화가 동작을 보존했음을 확인했다.
+
+### ⑥ 계획 대비 달라진 점
+
+**최적화 항목을 "안전한 것"과 "동작을 바꾸는 것"으로 나눠 분리했다.** 처음 검토에서는 자석 물리 관련 개선점 5개(a~e)를 모두 찾았지만, 이 중 sqrt 제거·캐싱·0거리 방어(a·c·e)는 **결과가 수학적으로 동일**한 반면 쌍 대칭화(b)와 자력 제곱 수정은 **물리 결과가 달라진다.**
+
+이걸 한 번에 적용했다면 플레이 테스트에서 "느낌이 다르다"는 결과가 나왔을 때 **원인이 어느 변경인지 특정할 수 없었을 것**이다. 안전한 것만 먼저 넣고 "차이가 없어야 정상"이라는 명확한 기대값을 세운 덕분에, 테스트 결과가 그대로 검증이 됐다.
+
+**컴파일 검증이 통과했다는 사실 자체를 다시 의심해야 했다.** Phase 5에서 겪은 "`Assembly-CSharp`가 ProBuilder 오류로 빌드 대상에서 조용히 제외되어, 우리 코드가 컴파일된 적도 없는데 오류 0건으로 보이던" 함정 때문이다. 이번에는 빌드 로그에 **우리 소스 파일 경로가 찍힌 경고가 실제로 존재하는지**를 확인하는 것으로 "정말 컴파일됐다"는 증거를 삼았다. 검증 도구 자체가 거짓말을 할 수 있다면, 도구가 일했다는 증거를 따로 확인해야 한다.
+
+### ⑦ 남은 작업
+
+이번에 검토했지만 적용하지 않은 항목 — 우선순위 순:
+
+| 항목 | 위치 | 성격 |
+|---|---|---|
+| 쌍 대칭화 (계산량 1/2) | `MagnetWorld.FixedUpdate` | 필터 비대칭 규칙 확정 필요 |
+| 자력 제곱 `(m1·m2)²` | `CalculateGilbertForce` | 버그/튜닝 여부 확정 필요, 밸런스 영향 |
+| 프레임당 문자열 할당 | `Player_Panel.Update_Timer`의 `string.Format` | 값이 바뀔 때만 갱신하면 호출 1/10 |
+| `GetComponent` 반복 | `InGameUI_Manager`(패널당 `Image` 3회), `GameDirector`(볼마다 `MagnetContact`), `MagnetContact.OnDisable` | 캐싱 또는 참조 타입 변경 |
+| `Camera.main` / `LayerMask.NameToLayer` | `GameDirector.SpawnAndStartTimer` | 클릭마다 실행 → `Awake` 1회로 |
+| `point.gameObject.GetComponent<Transform>().transform` | `AI_FSM.CheckSpawnPoints` | `point.transform`으로 충분 (중복 호출 2단계) |
+
+---
+
 <!-- 이후 작업은 이 아래에 최신순으로 추가 -->
