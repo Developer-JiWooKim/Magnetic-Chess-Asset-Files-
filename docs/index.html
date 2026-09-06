@@ -1,0 +1,1460 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+
+<title>Magnetic Chess — Unity 자석 물리 턴제 보드게임</title>
+<meta name="description" content="Google Play에 출시한 Unity 자석 물리 턴제 보드게임. 길버트 힘 계산, 오브젝트 풀링, 턴 상태 관리 구현과 Unity 2022 → Unity 6 마이그레이션 과정에서 찾아낸 버그들을 정리한 개발 기록입니다.">
+<meta name="author" content="김지우">
+
+<link rel="canonical" href="https://developer-jiwookim.github.io/Magnetic-Chess-Asset-Files-/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Magnetic Chess — Unity 자석 물리 턴제 보드게임">
+<meta property="og:description" content="Google Play에 출시한 Unity 자석 물리 턴제 보드게임의 개발·운영 기록.">
+<meta property="og:url" content="https://developer-jiwookim.github.io/Magnetic-Chess-Asset-Files-/">
+<meta property="og:image" content="https://developer-jiwookim.github.io/Magnetic-Chess-Asset-Files-/assets/shot4.jpg">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+
+<style>
+:root{color-scheme:dark}
+img{max-width:100%}
+/* ─────────────────────────────────────────────────────────────
+   Magnetic Chess — 포트폴리오
+   팔레트는 게임 스크린샷의 실제 화소에서 뽑았다.
+     원목 책상 그늘   #17120E  → 지면
+     자석 공 청동 각인 #C9A961  → 물리·자력 관련 강조
+     타이틀 테두리 민트 #7FD6A0 → UI 크롬 강조
+     보드 회색        #8A8A92
+     모드 카드 앰버/레드 #E0A030 / #D65A4A → 의미색
+   게임이 어두운 방 안에서 벌어지므로 다크 단일 테마로 고정한다.
+   대신 모든 색을 명시적으로 칠해 호스트 배경에 기대지 않는다.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#17120E;
+  --ground-deep:#100C09;
+  --surface:#211A14;
+  --surface-2:#2C231B;
+  --line:#3A2E24;
+  --line-soft:#2B221A;
+  --code-bg:#0D0906;
+
+  --ink:#F0E8DC;
+  --ink-2:#C0B2A0;
+  --muted:#8B7D6C;
+
+  --accent:#7FD6A0;
+  --accent-deep:#3E8A5C;
+  --bronze:#C9A961;
+  --bronze-deep:#8A6F35;
+  --board:#8A8A92;
+
+  --warn:#E0A030;
+  --risk:#D65A4A;
+
+  --glow:rgba(127,214,160,.10);
+  --glow-bronze:rgba(201,169,97,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 28px 64px -32px rgba(0,0,0,.95);
+
+  --f-display:"Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans KR", -apple-system, "Malgun Gothic", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", Consolas, ui-monospace, monospace;
+
+  --page:1080px;
+  --measure:66ch;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-weight:350;
+  font-size:16px;
+  line-height:1.78;
+  word-break:keep-all;
+  overflow-wrap:break-word;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+  overflow-x:hidden;
+}
+/* 타이틀 화면의 창문 역광. 히어로 뒤에만 깔린다. */
+body::before{
+  content:"";
+  position:absolute; inset:0 0 auto 0; height:820px;
+  pointer-events:none; z-index:0;
+  background:
+    radial-gradient(58% 44% at 76% 2%, var(--glow-bronze), transparent 66%),
+    radial-gradient(52% 38% at 14% 8%, var(--glow), transparent 64%);
+}
+
+p{margin:0}
+strong{font-weight:600; color:var(--ink)}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(127,214,160,.3)}
+a:hover{border-bottom-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px}
+img{display:block; width:100%; height:auto}
+::selection{background:var(--accent-deep); color:#04120A}
+
+.wrap{max-width:var(--page); margin:0 auto; padding:0 26px; position:relative; z-index:1}
+.measure{max-width:var(--measure)}
+
+/* ── 공통 타이포 ── */
+.eyebrow{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 12px;
+}
+h2{
+  font-family:var(--f-body); font-weight:600;
+  font-size:clamp(24px,3.2vw,31px); line-height:1.3; letter-spacing:-.01em;
+  margin:0 0 16px; text-wrap:balance; color:var(--ink);
+}
+h3{font-weight:600; font-size:17.5px; line-height:1.5; margin:0 0 7px; color:var(--ink)}
+h4{
+  font-family:var(--f-mono); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); font-weight:500; margin:0;
+}
+.lede{font-size:17px; line-height:1.8; color:var(--ink-2)}
+.dim{color:var(--muted)}
+.small{font-size:13.5px; line-height:1.7}
+code:not(pre code){
+  font-family:var(--f-mono); font-size:.87em; color:var(--ink-2);
+  background:var(--code-bg); border:1px solid var(--line-soft);
+  padding:1.5px 6px; white-space:nowrap;
+}
+
+/* ── HERO ── */
+.hero{padding:76px 0 60px}
+.kicker{
+  font-family:var(--f-mono); font-size:11.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--muted);
+  display:flex; flex-wrap:wrap; align-items:center; gap:11px; margin:0 0 26px;
+}
+.kicker b{color:var(--accent); font-weight:500}
+.kicker i{font-style:normal; color:var(--line)}
+
+.hero-grid{display:grid; gap:48px; align-items:start}
+@media (min-width:960px){ .hero-grid{grid-template-columns:minmax(0,1fr) 400px; gap:56px} }
+
+h1{
+  font-family:var(--f-display); font-weight:600;
+  font-size:clamp(52px,8.4vw,88px); line-height:1.02; letter-spacing:-.008em;
+  margin:0; color:var(--ink);
+}
+.h1-sub{
+  font-family:var(--f-mono); font-size:12.5px; letter-spacing:.17em;
+  text-transform:uppercase; color:var(--accent); margin:16px 0 0; opacity:.9;
+}
+.hero-lede{margin-top:26px; font-size:17.5px; line-height:1.8; color:var(--ink-2); max-width:48ch}
+.hero-lede em{
+  font-style:normal; color:var(--ink); font-weight:500;
+  box-shadow:inset 0 -.44em 0 rgba(127,214,160,.14);
+}
+
+.links{margin-top:32px; display:flex; flex-wrap:wrap; gap:10px}
+.btn{
+  font-family:var(--f-mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  padding:11px 19px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink-2); display:inline-flex; align-items:center; gap:9px;
+  transition:border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+.btn:hover{border-color:var(--accent); color:var(--ink); background:var(--surface-2)}
+.btn--store{background:var(--accent-deep); border-color:var(--accent-deep); color:#F2FBF5}
+.btn--store:hover{background:var(--accent); border-color:var(--accent); color:#08160E}
+.btn svg{width:14px; height:14px; fill:currentColor; flex:none}
+
+/* 스펙 표 */
+.spec{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+  margin:44px 0 0; border-top:1px solid var(--line);
+}
+.spec div{padding:15px 17px 14px; border-bottom:1px solid var(--line); border-right:1px solid var(--line)}
+.spec div:last-child{border-right:0}
+.spec dt{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 5px;
+}
+.spec dd{margin:0; font-size:15px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums}
+.spec dd small{display:block; font-weight:400; font-size:12px; color:var(--muted); font-family:var(--f-mono); margin-top:2px}
+
+/* ── 자석 시뮬레이터 ── */
+.sim{background:var(--ground-deep); border:1px solid var(--line); box-shadow:var(--shadow)}
+.sim-head{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:13px 16px; border-bottom:1px solid var(--line); background:var(--surface);
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--muted);
+}
+.sim-head b{color:var(--bronze); font-weight:500}
+.sim canvas{width:100%; height:auto; display:block; background:var(--ground-deep); cursor:crosshair}
+.sim-foot{padding:13px 16px; border-top:1px solid var(--line); background:var(--surface)}
+.sim-eq{
+  font-family:var(--f-mono); font-size:12.5px; color:var(--bronze);
+  text-align:center; padding:2px 0 9px; letter-spacing:.02em;
+}
+.sim-eq span{color:var(--muted)}
+.sim-note{font-family:var(--f-mono); font-size:10.5px; line-height:1.65; color:var(--muted); margin:0}
+.sim-btn{
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  background:none; border:1px solid var(--line); color:var(--muted);
+  padding:4px 10px; cursor:pointer; transition:border-color 160ms ease, color 160ms ease;
+}
+.sim-btn:hover{border-color:var(--bronze); color:var(--bronze)}
+
+/* ── 섹션 ── */
+section{padding:68px 0; border-top:1px solid var(--line-soft)}
+.sec-head{margin-bottom:36px}
+.sec-head p{margin-top:14px; color:var(--ink-2); max-width:var(--measure)}
+.block{margin:0 0 46px}
+.block:last-child{margin-bottom:0}
+.block > .measure{margin-bottom:18px}
+.stack{display:grid; gap:16px}
+
+/* ── 스크린샷 ── */
+.shots{display:grid; gap:18px}
+@media (min-width:760px){ .shots{grid-template-columns:1fr 1fr} }
+.shot{margin:0; background:var(--surface); border:1px solid var(--line)}
+.shot img{border-bottom:1px solid var(--line)}
+.shot figcaption{padding:12px 15px; display:grid; gap:3px}
+.shot .cap-k{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--accent);
+}
+.shot .cap-v{font-size:13.5px; color:var(--ink-2); line-height:1.6}
+
+/* 영상 */
+.video{margin:22px 0 0; border:1px solid var(--line); background:var(--ground-deep)}
+.video-frame{position:relative; width:100%; aspect-ratio:16/9}
+.video-frame iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+.video-cap{
+  padding:11px 15px; border-top:1px solid var(--line); background:var(--surface);
+  font-family:var(--f-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+}
+.video-cap b{color:var(--accent); font-weight:500}
+
+/* ── 규칙 루프 ── */
+.loop{display:flex; flex-wrap:wrap; align-items:stretch; margin:0 0 18px}
+.loop-node{
+  flex:1 1 160px; background:var(--surface); border:1px solid var(--line);
+  padding:14px 16px 15px;
+}
+.loop-node b{display:block; font-family:var(--f-mono); font-size:12px; color:var(--accent); font-weight:500}
+.loop-node span{display:block; font-size:13px; color:var(--ink-2); margin-top:4px; line-height:1.55}
+.loop-arrow{
+  display:flex; align-items:center; justify-content:center; padding:0 11px;
+  color:var(--line); font-family:var(--f-mono); font-size:15px; flex:0 0 auto;
+}
+@media (max-width:820px){
+  .loop{flex-direction:column}
+  .loop-arrow{padding:6px 0; transform:rotate(90deg)}
+}
+
+/* 승패 조건 */
+.wincond{display:grid; gap:12px; margin-top:18px}
+@media (min-width:700px){ .wincond{grid-template-columns:1fr 1fr} }
+.wincond > div{
+  background:var(--surface); border:1px solid var(--line); border-left:2px solid var(--line);
+  padding:17px 20px;
+}
+.wincond .a{border-left-color:var(--accent)}
+.wincond .b{border-left-color:var(--bronze)}
+.wincond h4{margin-bottom:7px}
+.wincond p{font-size:14.5px; color:var(--ink-2); line-height:1.7}
+
+/* ── 코드 ── */
+figure.code{margin:0; border:1px solid var(--line); background:var(--code-bg)}
+figure.code figcaption{
+  display:flex; justify-content:space-between; align-items:center; gap:16px;
+  padding:9px 14px; border-bottom:1px solid var(--line); background:var(--surface);
+  font-family:var(--f-mono); font-size:10.5px; color:var(--muted); letter-spacing:.04em;
+}
+figure.code figcaption b{font-weight:500; color:var(--ink-2)}
+figure.code figcaption span{
+  letter-spacing:.12em; text-transform:uppercase; font-size:9.5px;
+  white-space:nowrap; color:var(--bronze); opacity:.85;
+}
+pre{
+  margin:0; padding:16px 18px; overflow-x:auto; font-family:var(--f-mono);
+  font-size:12.5px; line-height:1.75; color:#CFC5B6; tab-size:2;
+}
+.c{color:#7A6E5F; font-style:italic}
+.k{color:#E0A030}
+.t{color:#7FD6A0}
+.s{color:#C9A961}
+.n{color:#D8956B}
+.hl{
+  display:inline-block; width:100%;
+  background:linear-gradient(90deg, rgba(214,90,74,.16), rgba(214,90,74,.03));
+  box-shadow:inset 2px 0 0 var(--risk);
+}
+.hl-ok{
+  display:inline-block; width:100%;
+  background:linear-gradient(90deg, rgba(127,214,160,.14), rgba(127,214,160,.02));
+  box-shadow:inset 2px 0 0 var(--accent);
+}
+.codenote{
+  font-size:13.5px; color:var(--muted); line-height:1.7; margin:14px 0 0;
+  max-width:74ch; padding-left:14px; border-left:2px solid var(--line);
+}
+
+/* 코드 나란히 */
+.diff{display:grid; gap:14px; margin-top:20px}
+@media (min-width:900px){ .diff{grid-template-columns:1fr 1fr} }
+
+/* ── 레이어 ── */
+.layers{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px}
+.layer{
+  flex:1 1 150px; background:var(--surface); border:1px solid var(--line);
+  border-top:2px solid var(--line); padding:14px 15px 15px;
+}
+.layer.key{border-top-color:var(--accent)}
+.layer .nm{font-family:var(--f-mono); font-size:13.5px; font-weight:500; color:var(--ink); margin:0 0 5px}
+.layer .ln{font-family:var(--f-mono); font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.layer .ds{font-size:12.5px; line-height:1.55; color:var(--ink-2); margin-top:8px}
+
+/* ── 표 ── */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:560px}
+th,td{padding:10px 15px; text-align:left; border-bottom:1px solid var(--line-soft); vertical-align:top}
+thead th{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--muted); font-weight:500; background:var(--surface-2);
+  border-bottom:1px solid var(--line); white-space:nowrap;
+}
+tbody th{font-family:var(--f-mono); font-weight:500; color:var(--accent); white-space:nowrap; font-size:12.5px}
+td{color:var(--ink-2); line-height:1.65}
+td.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--ink); white-space:nowrap}
+tbody tr:last-child th, tbody tr:last-child td{border-bottom:0}
+
+/* ── 실전 경험 카드 ── */
+.cases{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); margin-top:8px}
+.case{background:var(--surface); padding:24px 26px}
+.case-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 14px; margin-bottom:12px}
+.case-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.11em; text-transform:uppercase;
+  padding:3px 8px; white-space:nowrap; border:1px solid;
+}
+.tag-bug{color:var(--risk); border-color:rgba(214,90,74,.4); background:rgba(214,90,74,.08)}
+.tag-migr{color:var(--warn); border-color:rgba(224,160,48,.4); background:rgba(224,160,48,.08)}
+.case h3{margin:0}
+.case > p{color:var(--ink-2); font-size:14.5px; line-height:1.75; max-width:var(--measure)}
+.trace{display:grid; margin:18px 0 0; border-top:1px solid var(--line-soft); max-width:78ch}
+.trace > div{
+  display:grid; grid-template-columns:76px minmax(0,1fr); gap:18px;
+  padding:11px 0; border-bottom:1px solid var(--line-soft); align-items:start;
+}
+.trace dt{
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); margin:0; padding-top:5px;
+}
+.trace dd{margin:0; font-size:14px; color:var(--ink-2); line-height:1.7}
+.trace dd b{color:var(--ink); font-weight:600}
+.trace .fix dt{color:var(--accent)}
+.trace .fix dd{color:var(--ink)}
+@media (max-width:620px){
+  .trace > div{grid-template-columns:1fr; gap:3px}
+  .trace dt{padding-top:0}
+  .case{padding:22px 18px}
+}
+
+/* ── 푸터 ── */
+footer{
+  padding:40px 0 72px; border-top:1px solid var(--line); margin-top:8px;
+  display:flex; flex-wrap:wrap; gap:18px 28px; justify-content:space-between; align-items:baseline;
+  font-family:var(--f-mono); font-size:11.5px; letter-spacing:.04em; color:var(--muted);
+}
+footer .fl{display:flex; flex-wrap:wrap; gap:8px}
+
+@media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<!-- ══════════ HERO ══════════ -->
+<header class="hero">
+  <p class="kicker">
+    <span>Unity 6 · URP · Android</span><i>/</i>
+    <b>Google Play 출시</b><i>/</i>
+    <span>1인 개발</span>
+  </p>
+
+  <div class="hero-grid">
+    <div>
+      <h1>Magnetic Chess</h1>
+      <p class="h1-sub">자석 물리 턴제 보드게임</p>
+
+      <p class="hero-lede">
+        보드 위에 자석 공을 하나씩 놓아 상대의 공을 끌어당기고, 자기 조각을 먼저 0으로 만드는 쪽이 이기는
+        2인 턴제 게임입니다. <em>실제로 Google Play에 출시해 운영 중</em>이며,
+        이 페이지는 출시 이후 <em>Unity 2022에서 Unity 6로 엔진을 올리고 코드를 정리하는 과정</em>에서
+        마주친 문제들을 중심으로 정리한 기록입니다.
+      </p>
+
+      <div class="links">
+        <a class="btn btn--store" href="https://play.google.com/store/apps/details?id=com.developerjw.magenticchess.mobile" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 1.8v20.4c0 .5.3.9.7 1L15.5 12 4.3.8c-.4.1-.7.5-.7 1zm13.1 12.4L6.1 21.9l9.4-9.4 1.2 1.7zM20.4 12c0 .5-.3 1-.8 1.3l-2.2 1.3-1.4-2.6 1.4-2.6 2.2 1.3c.5.3.8.8.8 1.3zM6.1 2.1l10.6 7.7-1.2 1.7L6.1 2.1z"/></svg>
+          Play Store
+        </a>
+        <a class="btn" href="https://youtu.be/SnjKNFRUPV0" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+          플레이 영상
+        </a>
+        <a class="btn" href="https://github.com/Developer-JiWooKim/Magnetic-Chess-Asset-Files-" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2.9-.3 2-.4 3-.4s2.1.1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+          GitHub
+        </a>
+      </div>
+
+      <dl class="spec">
+        <div><dt>엔진</dt><dd>Unity 6<small>6000.5.3f1 · URP</small></dd></div>
+        <div><dt>최신 버전</dt><dd>1.1.0<small>versionCode 20 · 심사 중</small></dd></div>
+        <div><dt>스크립트</dt><dd>50개<small>2,967 lines</small></dd></div>
+        <div><dt>모드</dt><dd>2종<small>AI · 오프라인 2인</small></dd></div>
+        <div><dt>플랫폼</dt><dd>Android<small>IL2CPP · ARM64</small></dd></div>
+        <div><dt>개발</dt><dd>1인<small>기획 · 클라이언트</small></dd></div>
+      </dl>
+    </div>
+
+    <!-- 자석 시뮬레이터 -->
+    <div class="sim">
+      <div class="sim-head">
+        <span>Gilbert Force · <b id="sim-count">6</b> magnets</span>
+        <button class="sim-btn" id="sim-reset" type="button">Reset</button>
+      </div>
+      <canvas id="sim" width="760" height="760" aria-label="게임과 같은 길버트 힘 공식으로 계산되는 자석 시뮬레이션"></canvas>
+      <div class="sim-foot">
+        <p class="sim-eq">F = μ·m₁·m₂·<span>dir</span> / (4π·d²)</p>
+        <p class="sim-note">
+          보드를 클릭하면 자석이 하나 추가됩니다. 같은 극은 밀어내고 다른 극은 끌어당기며,
+          게임의 <code>MagnetWorld.CalculateGilbertForce</code>와 같은 식으로 매 프레임 계산합니다.
+        </p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════ 화면 ══════════ -->
+<section id="screens">
+  <div class="sec-head">
+    <p class="eyebrow">Screens</p>
+    <h2>게임 화면</h2>
+    <p>Google Play 스토어 등록에 사용한 실제 빌드의 스크린샷입니다.</p>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <img src="assets/shot1.jpg" alt="Magnetic Chess 타이틀 화면 — 3D 방 안의 책상을 배경으로 게임 제목과 Touch to Start 문구가 떠 있다">
+      <figcaption>
+        <span class="cap-k">Title</span>
+        <span class="cap-v">방 안 책상 위에서 게임이 벌어진다는 설정을 그대로 타이틀 배경으로 썼다. 카메라는 시작 시 책상 쪽으로 이동한다.</span>
+      </figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="assets/shot2.jpg" alt="모드 선택 화면 — Offline Multi, AI, Online Multi(preparing) 세 장의 카드가 책상 위 스마트폰 위에 떠 있다">
+      <figcaption>
+        <span class="cap-k">Mode Select</span>
+        <span class="cap-v">오프라인 2인과 AI 대전을 제공한다. 온라인 대전은 준비 중 상태로 비활성 처리했다.</span>
+      </figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="assets/shot3.jpg" alt="게임 설정 화면 — Piece Count, Piece Count_AI, Waiting Time, Max Turn 드롭다운과 Back/Play 버튼">
+      <figcaption>
+        <span class="cap-k">Game Setting</span>
+        <span class="cap-v">조각 수, AI 조각 수, 턴 대기 시간, 최대 턴을 경기 전에 정한다. 최대 턴은 무제한으로도 둘 수 있다.</span>
+      </figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="assets/shot4.jpg" alt="인게임 화면 — 격자 보드 위에 자석 공 네 개가 놓여 있고 좌우에 Player 1과 AI의 조각 수와 타이머가 표시된다">
+      <figcaption>
+        <span class="cap-k">In-Game</span>
+        <span class="cap-v">양쪽에 남은 조각 수와 대기 타이머, 상단에 현재 턴과 최대 턴을 띄운다. 현재 턴인 쪽에 붉은 테두리가 들어온다.</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="video">
+    <div class="video-frame">
+      <iframe src="https://www.youtube-nocookie.com/embed/SnjKNFRUPV0" title="Magnetic Chess 플레이 영상"
+              loading="lazy"
+              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+    </div>
+    <p class="video-cap"><span>한 판이 진행되는 과정 — 배치부터 결과 화면까지</span><b>YouTube</b></p>
+  </div>
+</section>
+
+<!-- ══════════ 규칙 ══════════ -->
+<section id="rules">
+  <div class="sec-head">
+    <p class="eyebrow">Rules</p>
+    <h2>한 턴에 일어나는 일</h2>
+    <p>
+      규칙은 단순하지만, 공이 붙는 순간 조각이 늘어난다는 점 때문에
+      "많이 붙이는 것"이 아니라 "붙지 않게 놓는 것"이 실력이 되는 게임입니다.
+    </p>
+  </div>
+
+  <div class="loop">
+    <div class="loop-node"><b>1 · 배치</b><span>자기 턴에 보드의 빈 자리를 터치해 자석 공을 하나 놓는다. 내 조각은 1 줄어든다.</span></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-node"><b>2 · 자력</b><span>놓인 공들이 서로 끌어당기고 밀어낸다. 물리는 대기 시간 동안 계속 계산된다.</span></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-node"><b>3 · 충돌</b><span>공끼리 붙으면 붙은 개수만큼 현재 턴 플레이어의 조각이 늘어난다.</span></div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-node"><b>4 · 턴 종료</b><span>설정한 대기 시간이 지나면 차례가 상대에게 넘어간다.</span></div>
+  </div>
+
+  <div class="wincond">
+    <div class="a">
+      <h4>기본 승리 조건</h4>
+      <p>두 플레이어 중 <strong>조각이 먼저 0이 된 쪽</strong>이 승리합니다. 조각은 자기 턴에만 변하므로, 0이 된 사람은 언제나 현재 턴 플레이어입니다.</p>
+    </div>
+    <div class="b">
+      <h4>최대 턴 도달 시</h4>
+      <p>최대 턴까지 아무도 조각을 다 털어내지 못하면 <strong>남은 조각이 더 적은 쪽</strong>이 이기고, 같으면 무승부입니다. — 이 규칙에서 실제 버그가 나왔습니다(아래 참조).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 자석 물리 ══════════ -->
+<section id="physics">
+  <div class="sec-head">
+    <p class="eyebrow">Core System</p>
+    <h2>자석 물리</h2>
+    <p>
+      게임의 유일한 핵심 시스템이자 매 물리 프레임마다 모든 자석 쌍을 도는 O(n²) 루프입니다.
+      모바일에서 도는 코드라 계산량을 줄이는 것이 그대로 체감 성능이 됩니다.
+    </p>
+  </div>
+
+  <div class="block">
+    <div class="measure">
+      <h3>제곱근 두 번을 식으로 지웠다</h3>
+      <p class="lede small" style="margin-top:8px">
+        원래 코드는 힘의 크기 <code>|F| = μ·m₁·m₂ / (4π·d)</code>를 구한 뒤 방향 벡터
+        <code>dir/d</code>를 곱했습니다. 이때 <code>magnitude</code>와 <code>normalized</code>에서
+        제곱근이 두 번 들어갑니다. 두 식을 하나로 합치면 분모가 <code>d²</code>이 되어
+        <code>sqrMagnitude</code>만으로 같은 값을 얻을 수 있습니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MyAssets/Scripts/Magnet/MagnetWorld.cs</b><span>C#</span></figcaption>
+<pre><code><span class="c">/// 길버트 힘. 원래는 |F| = μ·m1·m2 / (4π·d)를 구한 뒤 dir/d로 방향을 곱했는데,</span>
+<span class="c">/// 두 식을 합치면 F = μ·m1·m2·dir / (4π·d²)이 되어 magnitude/normalized의 sqrt 두 번 없이</span>
+<span class="c">/// sqrMagnitude만으로 같은 값을 얻는다.</span>
+<span class="k">private</span> <span class="t">Vector3</span> CalculateGilbertForce(<span class="t">Magnet</span> magnet1, <span class="t">Vector3</span> m1_Pos, <span class="t">Magnet</span> magnet2, <span class="t">Vector3</span> m2_Pos)
+{
+    <span class="t">Vector3</span> dir = m2_Pos - m1_Pos;
+
+<span class="hl-ok">    <span class="k">float</span> sqrDistance = <span class="t">Mathf</span>.Max(dir.sqrMagnitude, MinSqrDistance);</span>
+
+    <span class="k">float</span> magnetForce = magnet1.MagnetForce * magnet2.MagnetForce;
+
+    <span class="k">float</span> scale = Permeability * magnetForce * magnetForce / (FourPi * sqrDistance);
+
+    <span class="k">if</span> (magnet1.MagneticPole == magnet2.MagneticPole)
+    {
+        scale = -scale;   <span class="c">// 같은 극이면 밀어낸다</span>
+    }
+
+    <span class="k">return</span> scale * dir;
+}</code></pre>
+    </figure>
+
+    <p class="codenote">
+      <code>MinSqrDistance</code>는 두 자석이 완전히 겹쳤을 때 0으로 나눠 <code>NaN</code>이 물리 엔진에
+      들어가는 것을 막는 하한선입니다. 정상적인 플레이에서는 걸리지 않지만, 걸렸을 때 물리가 통째로
+      망가지는 종류의 값이라 명시적으로 막아 두었습니다.
+    </p>
+  </div>
+
+  <div class="block">
+    <div class="measure">
+      <h3>자석이 스스로 등록한다</h3>
+      <p class="lede small" style="margin-top:8px">
+        원래는 <code>FindObjectsOfType&lt;Magnet&gt;()</code>으로 매번 씬 전체를 뒤졌습니다.
+        이건 물리 프레임마다 돌기에는 너무 비싼 호출입니다. 각 자석이 <code>OnEnable</code>/<code>OnDisable</code>에서
+        정적 목록에 스스로 등록·해제하도록 바꿨습니다. 비활성 오브젝트는 애초에 들어가지 않으므로
+        <strong>결과 집합은 이전과 동일</strong>합니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MyAssets/Scripts/Magnet/Magnet.cs</b><span>C#</span></figcaption>
+<pre><code><span class="k">public sealed class</span> <span class="t">Magnet</span> : <span class="t">MonoBehaviour</span>
+{
+    <span class="c">/// 활성화된 자석 목록. MagnetWorld가 FixedUpdate마다 씬 전체를 검색하지 않도록</span>
+    <span class="c">/// 각 Magnet이 스스로 등록/해제한다.</span>
+<span class="hl-ok">    <span class="k">private static readonly</span> <span class="t">List</span>&lt;<span class="t">Magnet</span>&gt; activeMagnets = <span class="k">new</span>();</span>
+<span class="hl-ok">    <span class="k">public static</span> <span class="t">IReadOnlyList</span>&lt;<span class="t">Magnet</span>&gt; ActiveMagnets =&gt; activeMagnets;</span>
+
+    <span class="k">public enum</span> <span class="t">Pole</span> { North, South }
+
+    <span class="k">public float</span> MagnetForce;
+    <span class="k">public</span> <span class="t">Pole</span> MagneticPole;
+    <span class="k">public</span> <span class="t">Rigidbody</span> RigidBody;
+
+<span class="hl-ok">    <span class="k">private void</span> OnEnable()  =&gt; activeMagnets.Add(<span class="k">this</span>);</span>
+<span class="hl-ok">    <span class="k">private void</span> OnDisable() =&gt; activeMagnets.Remove(<span class="k">this</span>);</span>
+}</code></pre>
+    </figure>
+  </div>
+
+  <div class="block">
+    <div class="measure">
+      <h3>네이티브 호출을 루프 밖으로</h3>
+      <p class="lede small" style="margin-top:8px">
+        <code>transform.position</code>과 <code>transform.parent</code>는 C# 필드가 아니라 네이티브 호출입니다.
+        O(n²) 루프 안에서 읽으면 자석 쌍마다 비용이 붙습니다. 한 물리 프레임 안에서는 트랜스폼이 움직이지 않으므로,
+        <code>FixedUpdate</code> 시작에 한 번만 배열로 모아 두고 루프는 그 배열만 봅니다.
+        아래가 매 물리 프레임 도는 전체 루프입니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MagnetWorld.FixedUpdate</b><span>C# · 전문</span></figcaption>
+<pre><code><span class="k">private void</span> FixedUpdate()
+{
+    <span class="k">if</span> (IsActive == <span class="k">false</span>) <span class="k">return</span>;
+
+    <span class="t">IReadOnlyList</span>&lt;<span class="t">Magnet</span>&gt; magnets = <span class="t">Magnet</span>.ActiveMagnets;
+    <span class="k">int</span> count = magnets.Count;
+
+    <span class="k">if</span> (count &lt; <span class="n">2</span>) <span class="k">return</span>;
+
+<span class="hl-ok">    <span class="c">// 자석 수가 늘어날 때만 재할당한다. 매 프레임 new 하면 GC가 계속 돈다.</span></span>
+<span class="hl-ok">    <span class="k">if</span> (cachedPositions.Length &lt; count)</span>
+    {
+        cachedPositions = <span class="k">new</span> <span class="t">Vector3</span>[count];
+        cachedParents   = <span class="k">new</span> <span class="t">Transform</span>[count];
+    }
+
+<span class="hl-ok">    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; count; i++)      <span class="c">// 네이티브 호출은 여기서 1회씩만</span></span>
+    {
+        <span class="t">Transform</span> magnetTransform = magnets[i].transform;
+
+        cachedPositions[i] = magnetTransform.position;
+        cachedParents[i]   = magnetTransform.parent;
+    }
+
+    <span class="k">float</span> maxForceSqr = MaxForce * MaxForce;
+
+    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; count; i++)
+    {
+        <span class="t">Magnet</span> magnet_1 = magnets[i];
+        <span class="k">if</span> (magnet_1.RigidBody == <span class="k">null</span>) <span class="k">continue</span>;
+
+        <span class="t">Vector3</span> magnet_1_Pos    = cachedPositions[i];
+        <span class="t">Transform</span> magnet_1_Parent = cachedParents[i];
+
+        <span class="t">Vector3</span> accF = <span class="t">Vector3</span>.zero;
+
+        <span class="k">for</span> (<span class="k">int</span> j = <span class="n">0</span>; j &lt; count; j++)
+        {
+            <span class="k">if</span> (i == j) <span class="k">continue</span>;
+
+            <span class="t">Magnet</span> magnet_2 = magnets[j];
+
+            <span class="c">// 자력이 거의 없는 자석과 같은 부모(=같은 오브젝트)는 건너뛴다</span>
+            <span class="k">if</span> (magnet_2.MagnetForce &lt; minMagnetForce) <span class="k">continue</span>;
+            <span class="k">if</span> (magnet_1_Parent == cachedParents[j]) <span class="k">continue</span>;
+
+            accF += CalculateGilbertForce(magnet_1, magnet_1_Pos, magnet_2, cachedPositions[j]);
+        }
+
+<span class="hl-ok">        <span class="c">// 힘의 상한도 sqrMagnitude로 비교해 불필요한 sqrt를 피한다</span></span>
+<span class="hl-ok">        <span class="k">if</span> (accF.sqrMagnitude &gt; maxForceSqr)</span>
+        {
+            accF = accF.normalized * MaxForce;
+        }
+
+        magnet_1.RigidBody.AddForceAtPosition(accF, magnet_1_Pos);
+    }
+}</code></pre>
+    </figure>
+
+    <p class="codenote">
+      자석 쌍마다 힘을 누적한 뒤 <code>AddForceAtPosition</code>을 자석당 한 번만 호출합니다.
+      상한 검사도 <code>magnitude</code> 대신 <code>sqrMagnitude</code>로 비교해서,
+      실제로 상한에 걸린 경우에만 <code>normalized</code>의 제곱근을 지불합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 스폰과 풀링 ══════════ -->
+<section id="pooling">
+  <div class="sec-head">
+    <p class="eyebrow">Core System</p>
+    <h2>자석볼 스폰과 풀링</h2>
+    <p>
+      한 판에서 자석볼은 최대 수십 개가 생겼다 사라집니다. 직접 만든 <code>MemoryPool</code>을
+      엔진 기본 <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code>로 교체하면서,
+      그 API가 채워 주지 않는 두 가지를 직접 메웠습니다.
+    </p>
+  </div>
+
+  <div class="block">
+    <figure class="code">
+      <figcaption><b>MyAssets/Scripts/Magnet/MagnetBallSpawner.cs</b><span>C#</span></figcaption>
+<pre><code><span class="c">/// 현재 판에 나와 있는 자석볼. ObjectPool&lt;T&gt;는 활성 객체를 열거하는 API가 없어서</span>
+<span class="c">/// Get/Release 콜백에서 직접 관리한다.</span>
+<span class="k">private readonly</span> <span class="t">List</span>&lt;<span class="t">GameObject</span>&gt; activeMagnetBalls = <span class="k">new</span>();
+
+<span class="c">/// 위 목록과 같은 순서로 유지되는 MagnetContact 캐시. 턴이 끝날 때마다 자석볼 전체를</span>
+<span class="c">/// 훑으며 GetComponent를 부르지 않도록, 풀에서 꺼낼 때 한 번만 찾아 둔다.</span>
+<span class="k">private readonly</span> <span class="t">List</span>&lt;<span class="t">MagnetContact</span>&gt; activeMagnetContacts = <span class="k">new</span>();
+
+<span class="k">private void</span> Awake()
+{
+    pool = <span class="k">new</span> <span class="t">ObjectPool</span>&lt;<span class="t">GameObject</span>&gt;(
+        createFunc:      () =&gt; Instantiate(magnetBallPrefab),
+        actionOnGet:     OnGetMagnetBall,
+        actionOnRelease: OnReleaseMagnetBall,
+        actionOnDestroy: magnetBall =&gt; Destroy(magnetBall));
+}
+
+<span class="k">private void</span> OnGetMagnetBall(<span class="t">GameObject</span> magnetBall)
+{
+    activeMagnetBalls.Add(magnetBall);
+<span class="hl-ok">    activeMagnetContacts.Add(magnetBall.GetComponent&lt;<span class="t">MagnetContact</span>&gt;());  <span class="c">// 여기서 한 번만</span></span>
+
+    magnetBall.SetActive(<span class="k">true</span>);
+}
+
+<span class="k">private void</span> OnReleaseMagnetBall(<span class="t">GameObject</span> magnetBall)
+{
+    <span class="c">// 두 목록은 같은 순서를 유지해야 하므로 인덱스를 찾아 함께 지운다.</span>
+    <span class="k">int</span> index = activeMagnetBalls.IndexOf(magnetBall);
+    <span class="k">if</span> (index &gt;= <span class="n">0</span>)
+    {
+        activeMagnetBalls.RemoveAt(index);
+        activeMagnetContacts.RemoveAt(index);
+    }
+
+    magnetBall.transform.position = <span class="t">Vector3</span>.zero;
+    magnetBall.SetActive(<span class="k">false</span>);
+}</code></pre>
+    </figure>
+  </div>
+
+  <div class="block">
+    <div class="measure">
+      <h3>판이 시작되기 전에 미리 만들어 둔다</h3>
+      <p class="lede small" style="margin-top:8px">
+        경기 중에 <code>Instantiate</code>가 터지면 그 프레임이 튑니다.
+        <code>ObjectPool</code>에는 사전 생성 API가 없어서, 필요한 개수만큼 꺼냈다가 곧바로 반납하는 식으로
+        풀을 데워 둡니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MagnetBallSpawner.InstantiateMagnetBall</b><span>C#</span></figcaption>
+<pre><code><span class="c">/// 판 시작 전, 필요한 개수만큼 자석볼을 미리 만들어 둔다.</span>
+<span class="k">public void</span> InstantiateMagnetBall(<span class="k">int</span> magnetBallCount)
+{
+    <span class="k">int</span> shortage = magnetBallCount - pool.CountAll;
+    <span class="k">if</span> (shortage &lt;= <span class="n">0</span>) <span class="k">return</span>;
+
+<span class="hl-ok">    <span class="c">// ObjectPool에는 사전 생성 API가 없어서, 필요한 만큼 Get 했다가 곧바로 Release 한다.</span></span>
+    <span class="t">List</span>&lt;<span class="t">GameObject</span>&gt; warmedUp = <span class="k">new</span> <span class="t">List</span>&lt;<span class="t">GameObject</span>&gt;(shortage);
+
+    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; shortage; i++) warmedUp.Add(pool.Get());
+    <span class="k">foreach</span> (<span class="t">GameObject</span> magnetBall <span class="k">in</span> warmedUp) pool.Release(magnetBall);
+}
+
+<span class="k">public void</span> DeactivateAllMagnetBall()
+{
+<span class="hl-ok">    <span class="c">// Release 콜백이 activeMagnetBalls를 수정하므로 뒤에서부터 순회한다.</span></span>
+    <span class="k">for</span> (<span class="k">int</span> i = activeMagnetBalls.Count - <span class="n">1</span>; i &gt;= <span class="n">0</span>; i--)
+    {
+        pool.Release(activeMagnetBalls[i]);
+    }
+}</code></pre>
+    </figure>
+  </div>
+</section>
+
+<!-- ══════════ 턴 진행 ══════════ -->
+<section id="turn">
+  <div class="sec-head">
+    <p class="eyebrow">Core System</p>
+    <h2>턴 진행</h2>
+    <p>
+      리팩토링 전에는 상태·턴 수·승자·타이머가 모두 <code>GameDirector</code>의 필드로 섞여 있었습니다.
+      Unity API에 의존하지 않는 <strong>순수 C# 클래스 두 개</strong>로 떼어내, 규칙만 따로 읽고 테스트할 수 있게 했습니다.
+    </p>
+  </div>
+
+  <div class="diff">
+    <figure class="code">
+      <figcaption><b>Match/TurnStateMachine.cs</b><span>C#</span></figcaption>
+<pre><code><span class="c">/// 한 판의 턴 진행 상태(누구 차례인지 · 몇 턴째인지 · 누가 이겼는지)를 담는다.</span>
+<span class="c">/// MonoBehaviour와 Unity API에 의존하지 않는 순수 C# 클래스라</span>
+<span class="c">/// 단독으로 테스트할 수 있다.</span>
+<span class="k">public sealed class</span> <span class="t">TurnStateMachine</span>
+{
+    <span class="k">public</span> <span class="t">E_GameState</span> Current   { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">public</span> <span class="t">E_GameState</span> WinPlayer { <span class="k">get</span>; <span class="k">private set</span>; }
+    <span class="k">public int</span> TurnCount        { <span class="k">get</span>; <span class="k">private set</span>; }
+
+    <span class="k">public bool</span> IsPlayerTurn =&gt;
+        Current == <span class="t">E_GameState</span>.Player_1 ||
+        Current == <span class="t">E_GameState</span>.Player_2;
+
+    <span class="k">public void</span> ChangeTurn()
+    {
+        Current = Current == <span class="t">E_GameState</span>.Player_1
+            ? <span class="t">E_GameState</span>.Player_2
+            : <span class="t">E_GameState</span>.Player_1;
+    }
+
+    <span class="c">/// 승자를 확정하고 종료 상태로 넘어간다. 무승부는 None.</span>
+    <span class="k">public void</span> FinishWith(<span class="t">E_GameState</span> winner)
+    {
+        WinPlayer = winner;
+        Current   = <span class="t">E_GameState</span>.End;
+    }
+
+    <span class="c">/// 2번 플레이어까지 두어야 한 턴이 끝난 것으로 본다.</span>
+    <span class="k">public bool</span> IsMaxTurnReached(<span class="k">int</span> maxTurn)
+    {
+        <span class="k">return</span> maxTurn == TurnCount
+            &amp;&amp; Current == <span class="t">E_GameState</span>.Player_2;
+    }
+}</code></pre>
+    </figure>
+
+    <figure class="code">
+      <figcaption><b>Match/MatchTimer.cs</b><span>C#</span></figcaption>
+<pre><code><span class="c">/// 자석볼을 놓은 뒤 결과가 확정될 때까지 기다리는 시간을 재는 타이머.</span>
+<span class="c">/// MonoBehaviour가 아닌 순수 C# 클래스라 프레임 진행은</span>
+<span class="c">/// 소유자(GameDirector)가 Tick으로 넣어준다.</span>
+<span class="k">public sealed class</span> <span class="t">MatchTimer</span>
+{
+    <span class="k">private float</span> remainingTime;
+
+    <span class="c">/// UI에 표시할 남은 시간. 음수로 내려가지 않는다.</span>
+    <span class="k">public float</span> DisplayTime =&gt; <span class="t">Mathf</span>.Max(remainingTime, <span class="n">0f</span>);
+
+    <span class="k">public bool</span> IsFinished =&gt; remainingTime &lt;= <span class="n">0f</span>;
+
+    <span class="k">public void</span> Begin(<span class="k">float</span> duration) =&gt; remainingTime = duration;
+
+<span class="hl-ok">    <span class="k">public void</span> Tick(<span class="k">float</span> deltaTime) =&gt; remainingTime -= deltaTime;</span>
+
+    <span class="c">/// 자석볼끼리 달라붙는 등 결과가 아직 확정되지 않았을 때</span>
+    <span class="c">/// 대기 시간을 늘린다.</span>
+<span class="hl-ok">    <span class="k">public void</span> ExtendTime(<span class="k">float</span> seconds) =&gt; remainingTime += seconds;</span>
+}</code></pre>
+    </figure>
+  </div>
+
+  <div class="block" style="margin-top:34px">
+    <div class="measure">
+      <h3>공이 붙으면 턴이 조금 길어진다</h3>
+      <p class="lede small" style="margin-top:8px">
+        자석볼이 서로 달라붙는 중이라면 아직 결과가 확정된 게 아닙니다.
+        충돌을 감지한 쪽에서 타이머를 직접 늘려, <strong>물리가 안정될 때까지 턴 종료를 미룹니다.</strong>
+        <code>MatchTimer.ExtendTime</code>이 존재하는 이유가 이것입니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>Magnet/MagnetContact.cs</b><span>C#</span></figcaption>
+<pre><code><span class="k">private void</span> OnCollisionEnter(<span class="t">Collision</span> collision)
+{
+    <span class="k">if</span> (isContact) <span class="k">return</span>;
+
+    <span class="k">if</span> (collision.collider.CompareTag(<span class="s">"Magnet"</span>))
+    {
+<span class="hl-ok">        <span class="c">// 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.</span></span>
+<span class="hl-ok">        <span class="t">GameDirector</span>.Instance.ExtendConfirmTime(</span>
+<span class="hl-ok">            <span class="t">GameManager</span>.Instance.CurrentSetting.waitingTime * <span class="n">0.5f</span>);</span>
+
+        isContact = <span class="k">true</span>;
+    }
+}</code></pre>
+    </figure>
+
+    <p class="codenote">
+      <code>isContact</code> 플래그로 한 자석볼당 한 번만 연장되게 막습니다.
+      이게 없으면 공 하나가 여러 번 충돌할 때마다 턴이 계속 늘어납니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ AI ══════════ -->
+<section id="ai">
+  <div class="sec-head">
+    <p class="eyebrow">Core System</p>
+    <h2>AI는 어디에 놓는가</h2>
+    <p>
+      이 게임에서 나쁜 수는 "이미 놓인 공 근처에 놓는 것"입니다. 붙으면 내 조각이 늘어나니까요.
+      그래서 AI의 판단은 <strong>비어 있는 자리 중 기존 공에서 가장 멀리 떨어진 곳 고르기</strong>로 환원됩니다.
+    </p>
+  </div>
+
+  <div class="block">
+    <div class="measure">
+      <h3>안전 반경을 좁혀 가며 후보를 찾는다</h3>
+      <p class="lede small" style="margin-top:8px">
+        반경 2.0에서 시작해 "그 반경 안에 다른 공이 하나도 없는 빈 자리"를 찾습니다.
+        후보가 하나도 없으면 반경을 0.2씩 줄여 다시 찾고, 0.5 밑으로 내려가면
+        <strong>안전한 자리가 없다고 보고</strong> 빈 자리 중 무작위로 놓습니다.
+        판이 채워질수록 자연스럽게 기준이 느슨해지는 구조입니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MyAssets/Scripts/AI/AI_FSM.cs</b><span>C#</span></figcaption>
+<pre><code><span class="k">public</span> <span class="t">Vector3</span> AIMagnetBallSpawnPoint()
+{
+    CheckSpawnPoints();      <span class="c">// 빈 자리 / 찬 자리를 갈라 둔다</span>
+
+    <span class="k">return</span> notEmptyPointsTransform.Count &gt; <span class="n">0</span>
+        ? DecideSpawnPoint()
+        : RandomSpawnPoint();  <span class="c">// 첫 수는 그냥 무작위</span>
+}
+
+<span class="k">private</span> <span class="t">Vector3</span> DecideSpawnPoint()
+{
+    <span class="k">float</span> range = <span class="n">2f</span>;
+    <span class="k">bool</span> non_existent = <span class="k">false</span>;
+
+    final_index.Clear();
+    Search_Close_MagnetBall(range);
+
+<span class="hl-ok">    <span class="k">while</span> (final_index.Count == <span class="n">0</span>)   <span class="c">// 후보가 없으면 기준을 낮춘다</span></span>
+    {
+        <span class="k">if</span> (range &lt; <span class="n">0.5f</span>)
+        {
+            non_existent = <span class="k">true</span>;    <span class="c">// 안전한 자리가 없다</span>
+            <span class="k">break</span>;
+        }
+        range -= <span class="n">0.2f</span>;
+        Search_Close_MagnetBall(range);
+    }
+
+    <span class="k">int</span> index = non_existent
+        ? <span class="t">Random</span>.Range(<span class="n">0</span>, emptyPointsTransform.Count)
+<span class="hl-ok">        : final_index[<span class="t">Random</span>.Range(<span class="n">0</span>, final_index.Count)];  <span class="c">// 동점 후보 중 무작위</span></span>
+
+    <span class="k">return</span> emptyPointsTransform[index].position;
+}
+
+<span class="c">/// search_Range 안에 놓인 공이 하나도 없는 빈 자리만 후보로 남긴다.</span>
+<span class="k">private void</span> Search_Close_MagnetBall(<span class="k">float</span> range)
+{
+    final_index.Clear();
+
+    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; emptyPointsTransform.Count; i++)
+    {
+        <span class="k">bool</span> isOk = <span class="k">true</span>;
+
+        <span class="k">for</span> (<span class="k">int</span> j = <span class="n">0</span>; j &lt; notEmptyPointsTransform.Count; j++)
+        {
+            <span class="k">float</span> distance = <span class="t">Vector3</span>.Distance(
+                emptyPointsTransform[i].position,
+                notEmptyPointsTransform[j].position);
+
+            <span class="k">if</span> (distance &lt; range) isOk = <span class="k">false</span>;
+        }
+
+        <span class="k">if</span> (isOk) final_index.Add(i);
+    }
+}</code></pre>
+    </figure>
+
+    <p class="codenote">
+      후보가 여럿이면 그중 무작위로 고릅니다. 항상 첫 번째 후보를 고르면 AI가 늘 같은 자리부터
+      채워서 대국이 단조로워지기 때문입니다. 탐색 자체는 <code>List</code>를 매번 새로 만들지 않고
+      <code>Clear()</code>로 재사용합니다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════ 구조 ══════════ -->
+<section id="architecture">
+  <div class="sec-head">
+    <p class="eyebrow">Architecture</p>
+    <h2>코드 구조</h2>
+    <p>
+      출시 당시에는 씬 이름을 따라 <code>AllScene / GameScene / Title Scene</code>으로 나뉘어 있었습니다.
+      리팩토링하면서 <strong>씬이 아니라 역할</strong>을 기준으로 다시 묶고, 여러 클래스에 흩어져 있던
+      싱글턴 보일러플레이트·턴 상태·타이머·패널 표시 로직을 각각 한 곳으로 모았습니다.
+    </p>
+  </div>
+
+  <div class="layers">
+    <div class="layer key"><p class="nm">Core</p><p class="ln">7 files · 336 lines</p><p class="ds">데이터 저장, 게임 설정, 사운드, 씬 전환. <code>Singleton&lt;T&gt;</code>로 중복 제거.</p></div>
+    <div class="layer key"><p class="nm">Magnet</p><p class="ln">5 files · 362 lines</p><p class="ds">자력 계산, 공 스폰과 풀링, 충돌 판정.</p></div>
+    <div class="layer"><p class="nm">Match</p><p class="ln">12 files · 1,172 lines</p><p class="ds">경기 진행. <code>TurnStateMachine</code>·<code>MatchTimer</code>로 분리.</p></div>
+    <div class="layer"><p class="nm">MainMenu</p><p class="ln">14 files · 564 lines</p><p class="ds">타이틀·모드 선택·설정 패널.</p></div>
+    <div class="layer"><p class="nm">UI</p><p class="ln">11 files · 397 lines</p><p class="ds">공용 패널·메뉴바. <code>UIPanel</code> 기반.</p></div>
+    <div class="layer"><p class="nm">AI</p><p class="ln">1 file · 136 lines</p><p class="ds">빈 자리 탐색 후 배치 지점 결정.</p></div>
+  </div>
+
+  <div class="block" style="margin-top:34px">
+    <div class="measure">
+      <h3>매니저마다 복사되던 싱글턴을 하나로</h3>
+      <p class="lede small" style="margin-top:8px">
+        <code>GameManager</code>, <code>DataManager</code>, <code>SoundManager</code>, <code>GameDirector</code>가
+        각자 <code>Instance</code> 프로퍼티와 중복 제거 코드를 들고 있었습니다. 제네릭 베이스로 묶되,
+        <strong>씬 전환 시 유지 여부</strong>는 하위 클래스가 정하도록 열어 두었습니다 —
+        경기 씬에만 존재해야 하는 <code>GameDirector</code>는 살아남으면 안 되기 때문입니다.
+      </p>
+    </div>
+
+    <figure class="code">
+      <figcaption><b>MyAssets/Scripts/Core/Singleton.cs</b><span>C# · 전문</span></figcaption>
+<pre><code><span class="k">public abstract class</span> <span class="t">Singleton</span>&lt;<span class="t">T</span>&gt; : <span class="t">MonoBehaviour</span> <span class="k">where</span> <span class="t">T</span> : <span class="t">Singleton</span>&lt;<span class="t">T</span>&gt;
+{
+    <span class="k">private static</span> <span class="t">T</span> instance;
+
+    <span class="k">public static</span> <span class="t">T</span> Instance
+    {
+        <span class="k">get</span>
+        {
+            <span class="k">if</span> (instance == <span class="k">null</span>)
+            {
+                <span class="t">Debug</span>.Log(<span class="k">typeof</span>(<span class="t">T</span>).Name + <span class="s">" instance is null!!"</span>);
+            }
+            <span class="k">return</span> instance;
+        }
+    }
+
+<span class="hl-ok">    <span class="c">/// 씬이 바뀌어도 유지할지 여부.</span></span>
+<span class="hl-ok">    <span class="k">protected virtual bool</span> IsPersistent =&gt; <span class="k">true</span>;</span>
+
+    <span class="k">protected virtual void</span> Awake()
+    {
+        <span class="k">if</span> (instance == <span class="k">null</span>)
+        {
+            instance = <span class="k">this as</span> <span class="t">T</span>;
+
+            <span class="k">if</span> (IsPersistent)
+            {
+                DontDestroyOnLoad(<span class="k">this</span>.gameObject);
+            }
+        }
+        <span class="k">else if</span> (instance != <span class="k">this</span>)
+        {
+            Destroy(<span class="k">this</span>.gameObject);
+        }
+    }
+}</code></pre>
+    </figure>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <caption class="visually-hidden"></caption>
+      <thead>
+        <tr><th>정리한 것</th><th>이전</th><th>이후</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>싱글턴</th>
+          <td>매니저 클래스마다 <code>Instance</code> 프로퍼티와 중복 제거 코드를 각자 작성</td>
+          <td><code>Singleton&lt;T&gt;</code> 하나를 상속</td>
+        </tr>
+        <tr>
+          <th>턴 상태</th>
+          <td><code>GameDirector</code> 안에 상태·턴 수·승자가 필드로 섞여 있음</td>
+          <td><code>TurnStateMachine</code>이 상태 전이와 승자 확정을 담당</td>
+        </tr>
+        <tr>
+          <th>대기 타이머</th>
+          <td><code>GameDirector</code>의 <code>Update</code>에서 직접 감산</td>
+          <td><code>MatchTimer</code>로 분리</td>
+        </tr>
+        <tr>
+          <th>오브젝트 풀</th>
+          <td>직접 구현한 <code>MemoryPool</code></td>
+          <td>엔진 기본 <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code></td>
+        </tr>
+        <tr>
+          <th>패널 표시</th>
+          <td><code>Panel_Base</code>, <code>MenuButtonBase</code> 등 유사 베이스 클래스가 병존</td>
+          <td><code>UIPanel</code>의 <code>Show()</code> / <code>Hide()</code>로 통일</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════ 실전 경험 ══════════ -->
+<section id="ops">
+  <div class="sec-head">
+    <p class="eyebrow">In Production</p>
+    <h2>출시한 앱을 고치면서 배운 것</h2>
+    <p>
+      이미 사용자가 쓰고 있는 앱의 엔진을 올리고 코드를 갈아엎는 일은,
+      새로 만드는 것과 다른 종류의 주의를 요구했습니다. 아래는 실제로 겪은 세 가지입니다.
+    </p>
+  </div>
+
+  <div class="cases">
+
+    <article class="case">
+      <div class="case-head">
+        <span class="case-tag tag-bug">발견한 버그</span>
+        <h3>스토어 설명문과 실제 동작이 달랐다</h3>
+      </div>
+      <p>
+        구버전(출시본)과 리팩토링본을 파일 단위로 대조하다가, 최대 턴 도달 시의 승자 판정이 서로 다르다는 것을
+        발견했습니다. 처음에는 리팩토링이 규칙을 임의로 바꾼 줄 알았는데,
+        스토어 등록에 쓴 설명문을 확인해 보니 <strong>출시본 쪽이 명세를 어기고 있었습니다.</strong>
+      </p>
+
+      <div class="trace">
+        <div>
+          <dt>명세</dt>
+          <dd>스토어 설명문: "Max Turn까지 승자가 없으면 <b>Piece가 더 적은 사람이 승리</b>합니다."</dd>
+        </div>
+        <div>
+          <dt>증상</dt>
+          <dd>출시본은 최대 턴에 도달하면 조각 수와 무관하게 <b>항상 Player 2(AI)가 승리</b>했다.</dd>
+        </div>
+        <div>
+          <dt>원인</dt>
+          <dd>종료 조건만 검사하고 승자를 <code>winPlayer = gameState</code>로 덮어썼다. 최대 턴 검사는 <code>gameState == Player_2</code>일 때만 참이므로, 승자는 언제나 Player 2로 고정됐다.</dd>
+        </div>
+        <div class="fix">
+          <dt>수정</dt>
+          <dd>승자 판정을 <code>DecideWinnerByFewestPieces()</code>로 분리하고, 동점일 때의 무승부 상태를 결과 화면까지 연결했다.</dd>
+        </div>
+      </div>
+
+      <div class="diff">
+        <figure class="code">
+          <figcaption><b>출시본 · GameDirector.cs</b><span>Before</span></figcaption>
+<pre><code><span class="k">if</span> (GameSetting.maxTurn == turnCount
+    &amp;&amp; gameState == <span class="t">E_GameState</span>.Player_2)
+{
+    isPlaying = <span class="k">false</span>;
+}
+
+<span class="k">if</span> (isPlaying == <span class="k">false</span>)
+{
+<span class="hl">    winPlayer = gameState;  <span class="c">// 항상 Player_2</span></span>
+    gameState = <span class="t">E_GameState</span>.End;
+    GameFSM();
+}</code></pre>
+        </figure>
+
+        <figure class="code">
+          <figcaption><b>수정본 · Match/GameDirector.cs</b><span>After</span></figcaption>
+<pre><code><span class="c">/// 남은 조각이 더 적은 쪽이 이기고, 같으면 무승부다.</span>
+<span class="k">private</span> <span class="t">E_GameState</span> DecideWinnerByFewestPieces()
+{
+    <span class="k">int</span> p1 = playerList[__PLAYER__1].PieceCount;
+    <span class="k">int</span> p2 = playerList[__PLAYER__2].PieceCount;
+
+<span class="hl-ok">    <span class="k">if</span> (p1 == p2) <span class="k">return</span> <span class="t">E_GameState</span>.None;  <span class="c">// 무승부</span></span>
+
+    <span class="k">return</span> p1 &lt; p2 ? <span class="t">E_GameState</span>.Player_1
+                  : <span class="t">E_GameState</span>.Player_2;
+}</code></pre>
+        </figure>
+      </div>
+
+      <p class="codenote">
+        오래 방치된 버그일수록 "재현 보고"가 아니라 <strong>명세와 코드를 나란히 놓고 읽을 때</strong> 드러난다는 걸
+        배웠습니다. 최대 턴 설정 자체가 선택 사항이고 그 턴까지 가는 경기가 드물어서, 출시 후에도 제보가 없었습니다.
+      </p>
+    </article>
+
+    <article class="case">
+      <div class="case-head">
+        <span class="case-tag tag-bug">직접 만든 버그</span>
+        <h3>메서드 이름을 바꿨더니 버튼이 조용히 죽었다</h3>
+      </div>
+      <p>
+        코드 컨벤션을 맞추려고 <code>SetVolume_BGM</code> 같은 메서드명에서 언더스코어를 뺐습니다.
+        컴파일도 통과하고 에러도 없었지만, 옵션 패널의 볼륨 슬라이더가 아무 반응을 하지 않았습니다.
+      </p>
+
+      <div class="trace">
+        <div>
+          <dt>원인</dt>
+          <dd>Unity의 <code>UnityEvent</code> 영속 호출은 대상 메서드를 <b>문자열 이름으로</b> 프리팹·씬 파일에 저장합니다. C# 쪽 이름을 바꿔도 프리팹의 문자열은 따라오지 않고, 호출이 조용히 무시됩니다.</dd>
+        </div>
+        <div>
+          <dt>범위</dt>
+          <dd>씬과 프리팹 전체에서 <b>(대상 타입, 메서드명)</b> 쌍을 뽑아 실제 클래스에 존재하는지 전수 대조했습니다. 이름이 바뀐 클래스는 <code>OptionPanel</code>과 <code>MenuBar</code> 둘뿐이었고, 깨진 바인딩은 6곳이었습니다.</dd>
+        </div>
+        <div class="fix">
+          <dt>수정</dt>
+          <dd>프리팹·씬의 <code>m_MethodName</code>을 새 이름으로 갱신했습니다. 덤으로, 출시본에도 이미 존재하지 않던 <code>SetResolution</code> 바인딩을 함께 찾아냈습니다.</dd>
+        </div>
+      </div>
+
+      <figure class="code" style="margin-top:20px">
+        <figcaption><b>Prefabs/UI_Panel/OptionPanel.prefab</b><span>YAML</span></figcaption>
+<pre><code>  m_TargetAssemblyTypeName: <span class="t">OptionPanel</span>, Assembly-CSharp
+<span class="hl">- m_MethodName: SetVolume_SFX      <span class="c">// C#에는 더 이상 없는 이름</span></span>
+<span class="hl-ok">+ m_MethodName: SetVolumeSFX</span></code></pre>
+      </figure>
+
+      <p class="codenote">
+        인스펙터에서 연결한 것은 <strong>컴파일러가 지켜 주지 않는다</strong>는 점을 확실히 배웠습니다.
+        이후로는 UI 이벤트에 연결된 메서드를 바꿀 때, 프리팹·씬 텍스트에서 옛 이름을 먼저 검색합니다.
+      </p>
+    </article>
+
+    <article class="case">
+      <div class="case-head">
+        <span class="case-tag tag-migr">엔진 마이그레이션</span>
+        <h3>Unity 2022.3 → Unity 6</h3>
+      </div>
+      <p>
+        출시본은 Unity 2022.3.62f3, 현재 작업본은 Unity 6(6000.5.3f1)입니다.
+        엔진 메이저 버전과 함께 URP 14 → 17, ProBuilder 5 → 6 등 렌더링 관련 패키지가 한꺼번에 올라갑니다.
+      </p>
+      <div class="trace">
+        <div>
+          <dt>이관</dt>
+          <dd><code>FindObjectOfType</code> → <code>FindFirstObjectByType</code> 같은 API 교체, 폴더 구조를 <code>MyAssets/</code> 아래로 재편. <b>씬과 프리팹의 GUID는 보존</b>되어 빌드 씬 목록 참조가 깨지지 않았습니다.</dd>
+        </div>
+        <div>
+          <dt>주의</dt>
+          <dd>렌더링 파이프라인이 통째로 바뀌는 업그레이드라, 프로덕션 트랙에 바로 올리지 않고 <b>내부 테스트 트랙</b>을 거치는 것을 전제로 진행 중입니다.</dd>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<footer>
+  <span>Magnetic Chess · 1인 개발 · Unity 6</span>
+  <span class="fl">
+    <a href="https://play.google.com/store/apps/details?id=com.developerjw.magenticchess.mobile" target="_blank" rel="noopener">Play Store</a>
+    <span class="dim">·</span>
+    <a href="https://youtu.be/SnjKNFRUPV0" target="_blank" rel="noopener">플레이 영상</a>
+    <span class="dim">·</span>
+    <a href="https://github.com/Developer-JiWooKim/Magnetic-Chess-Asset-Files-" target="_blank" rel="noopener">GitHub</a>
+  </span>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var canvas = document.getElementById('sim');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  var countLabel = document.getElementById('sim-count');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // 게임과 같은 상수 이름을 쓴다. MagnetWorld.cs 참조.
+  var PERMEABILITY = 0.30;
+  var FOUR_PI = 4 * Math.PI;
+  var MIN_SQR = 90;        // 화면 좌표계에 맞춘 최소 거리 제곱(겹침 시 NaN 방지)
+  var MAX_FORCE = 2.4;
+  var DAMPING = 0.972;
+  var R = 21;              // 자석 반지름(px)
+  var PAD = 46;            // 보드 안쪽 여백
+
+  var magnets = [];
+
+  function seed() {
+    magnets = [];
+    var pts = [[0.30,0.28],[0.70,0.26],[0.22,0.63],[0.78,0.62],[0.50,0.45],[0.46,0.80]];
+    for (var i = 0; i < pts.length; i++) {
+      add(PAD + pts[i][0] * (W - PAD * 2), PAD + pts[i][1] * (H - PAD * 2), i % 2 === 0 ? 1 : -1);
+    }
+  }
+
+  function add(x, y, pole) {
+    if (magnets.length >= 14) magnets.shift();
+    magnets.push({
+      x: x, y: y, vx: 0, vy: 0,
+      pole: pole === undefined ? (Math.random() < 0.5 ? 1 : -1) : pole,
+      force: 26 + Math.random() * 8,
+      spin: Math.random() * Math.PI * 2
+    });
+    if (countLabel) countLabel.textContent = magnets.length;
+  }
+
+  // MagnetWorld.CalculateGilbertForce 와 같은 식:
+  //   F = μ·m1·m2·dir / (4π·d²),  같은 극이면 부호 반전
+  function step() {
+    var i, j, a, b, dx, dy, sqrD, scale, fx, fy, mag;
+
+    for (i = 0; i < magnets.length; i++) {
+      a = magnets[i];
+      fx = 0; fy = 0;
+
+      for (j = 0; j < magnets.length; j++) {
+        if (i === j) continue;
+        b = magnets[j];
+
+        dx = b.x - a.x;
+        dy = b.y - a.y;
+        sqrD = Math.max(dx * dx + dy * dy, MIN_SQR);
+
+        scale = PERMEABILITY * a.force * b.force / (FOUR_PI * sqrD);
+        if (a.pole === b.pole) scale = -scale;
+
+        fx += scale * dx;
+        fy += scale * dy;
+      }
+
+      mag = Math.sqrt(fx * fx + fy * fy);
+      if (mag > MAX_FORCE) { fx = fx / mag * MAX_FORCE; fy = fy / mag * MAX_FORCE; }
+
+      a.vx = (a.vx + fx) * DAMPING;
+      a.vy = (a.vy + fy) * DAMPING;
+    }
+
+    for (i = 0; i < magnets.length; i++) {
+      a = magnets[i];
+      a.x += a.vx; a.y += a.vy;
+
+      if (a.x < PAD + R) { a.x = PAD + R; a.vx *= -0.42; }
+      if (a.x > W - PAD - R) { a.x = W - PAD - R; a.vx *= -0.42; }
+      if (a.y < PAD + R) { a.y = PAD + R; a.vy *= -0.42; }
+      if (a.y > H - PAD - R) { a.y = H - PAD - R; a.vy *= -0.42; }
+    }
+
+    // 겹침 분리 — 게임에서는 물리 엔진이 하는 일
+    for (i = 0; i < magnets.length; i++) {
+      for (j = i + 1; j < magnets.length; j++) {
+        a = magnets[i]; b = magnets[j];
+        dx = b.x - a.x; dy = b.y - a.y;
+        var d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        var overlap = R * 2 - d;
+        if (overlap > 0) {
+          var ox = dx / d * overlap * 0.5, oy = dy / d * overlap * 0.5;
+          a.x -= ox; a.y -= oy; b.x += ox; b.y += oy;
+        }
+      }
+    }
+  }
+
+  function drawBoard() {
+    ctx.fillStyle = '#100C09';
+    ctx.fillRect(0, 0, W, H);
+
+    // 게임의 격자 보드
+    var inner = W - PAD * 2, cells = 11, cell = inner / cells;
+    ctx.fillStyle = '#1C1A1B';
+    ctx.fillRect(PAD, PAD, inner, inner);
+
+    ctx.strokeStyle = 'rgba(138,138,146,.17)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= cells; i++) {
+      var p = PAD + i * cell;
+      ctx.beginPath(); ctx.moveTo(p, PAD); ctx.lineTo(p, PAD + inner); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD, p); ctx.lineTo(PAD + inner, p); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(138,138,146,.34)';
+    ctx.strokeRect(PAD + .5, PAD + .5, inner - 1, inner - 1);
+  }
+
+  function draw() {
+    drawBoard();
+
+    var i, a;
+
+    // 인력·척력 선 — 가까운 쌍만
+    for (i = 0; i < magnets.length; i++) {
+      for (var j = i + 1; j < magnets.length; j++) {
+        a = magnets[i];
+        var b = magnets[j];
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 250) continue;
+        var alpha = (1 - d / 250) * 0.5;
+        ctx.strokeStyle = a.pole === b.pole
+          ? 'rgba(214,90,74,' + alpha * 0.8 + ')'
+          : 'rgba(127,214,160,' + alpha + ')';
+        ctx.lineWidth = 1;
+        ctx.setLineDash(a.pole === b.pole ? [3, 5] : []);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+
+    // 자석 공 — 스크린샷의 청동 각인 톤
+    for (i = 0; i < magnets.length; i++) {
+      a = magnets[i];
+
+      var g = ctx.createRadialGradient(a.x - R * .35, a.y - R * .4, R * .15, a.x, a.y, R);
+      g.addColorStop(0, '#6A5B44');
+      g.addColorStop(0.55, '#3A3026');
+      g.addColorStop(1, '#221C16');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(a.x, a.y, R, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = 'rgba(201,169,97,.55)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(a.x, a.y, R - 1, 0, Math.PI * 2); ctx.stroke();
+
+      // 극 표시
+      ctx.save();
+      ctx.translate(a.x, a.y);
+      ctx.rotate(a.spin);
+      ctx.strokeStyle = a.pole === 1 ? 'rgba(201,169,97,.95)' : 'rgba(127,214,160,.9)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      if (a.pole === 1) { ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.moveTo(0, -7); ctx.lineTo(0, 7); }
+      else { ctx.moveTo(-7, 0); ctx.lineTo(7, 0); }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function loop() {
+    step();
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  var raf = null;
+
+  canvas.addEventListener('click', function (e) {
+    var rect = canvas.getBoundingClientRect();
+    var x = (e.clientX - rect.left) / rect.width * W;
+    var y = (e.clientY - rect.top) / rect.height * H;
+    x = Math.min(Math.max(x, PAD + R), W - PAD - R);
+    y = Math.min(Math.max(y, PAD + R), H - PAD - R);
+    add(x, y);
+    if (reduced) { step(); draw(); }
+  });
+
+  document.getElementById('sim-reset').addEventListener('click', function () {
+    seed();
+    if (reduced) draw();
+  });
+
+  seed();
+
+  if (reduced) {
+    // 정지 상태로도 읽히도록 몇 스텝만 진행한 정지 화면을 그린다
+    for (var s = 0; s < 90; s++) step();
+    draw();
+  } else {
+    loop();
+  }
+})();
+</script>
+</body>
+</html>

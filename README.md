@@ -1,5 +1,18 @@
-# Magnetic-Chess-Asset-Files
-Magnetic Chess Asset Files
+# Magnetic Chess
+
+보드 위에 자석 공을 놓아 상대의 공을 끌어당기고, 자기 조각을 먼저 0으로 만드는 쪽이 이기는 2인 턴제 보드게임입니다.
+Google Play에 출시해 운영 중이며, 1인 개발했습니다.
+
+**[📄 개발 기록 (포트폴리오 페이지)](https://developer-jiwookim.github.io/Magnetic-Chess-Asset-Files-/)**
+· [▶ 플레이 영상](https://youtu.be/SnjKNFRUPV0)
+· [🎮 Google Play](https://play.google.com/store/apps/details?id=com.developerjw.magenticchess.mobile)
+
+포트폴리오 페이지에는 자석 물리(길버트 힘) 계산, 오브젝트 풀링, 턴 상태 관리 구현과
+Unity 2022 → Unity 6 마이그레이션 과정에서 찾아낸 버그들을 정리해 두었습니다.
+
+---
+
+## 에셋 사용 방법
 
 Magnetic Chess Unity Asset Files입니다. 아래 유니티 버전에서 URP프로젝트를 만들고 해당 에셋들을 다운받아 해당 URP프로젝트에 붙여넣기하면 됩니다.
 
