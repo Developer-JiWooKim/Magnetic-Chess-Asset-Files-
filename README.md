@@ -12,14 +12,6 @@ Unity 2022 → Unity 6 마이그레이션 과정에서 찾아낸 버그들을 �
 
 ---
 
-## 에셋 사용 방법
-
-Magnetic Chess Unity Asset Files입니다. 아래 유니티 버전에서 URP프로젝트를 만들고 해당 에셋들을 다운받아 해당 URP프로젝트에 붙여넣기하면 됩니다.
-
-Unity Version 2022.3.19f1 URP
-
------------------------------------------------------------------------------------------------------------------------------
-
 AI battle icon 출처
 <a href="https://www.flaticon.com/kr/free-icons/ai-" title="ai 어시스턴트 아이콘">Ai 어시스턴트 아이콘 제작자: Freepik - Flaticon</a>
 
