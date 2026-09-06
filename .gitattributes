@@ -161,3 +161,8 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# GitHub Pages 소스(docs/) 안의 이미지는 LFS 대상에서 제외한다.
+# GitHub Pages는 LFS 콘텐츠를 서빙하지 않고 포인터 텍스트를 그대로 내려주므로,
+# 여기 걸리면 이미지가 깨진 것처럼 보인다.
+docs/assets/*            -filter -diff -merge -text
