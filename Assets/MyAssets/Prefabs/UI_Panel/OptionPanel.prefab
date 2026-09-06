@@ -2074,7 +2074,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 7547900312859801793}
         m_TargetAssemblyTypeName: OptionPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Save_Button_Press
+        m_MethodName: PlaySoundSaveButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2606,7 +2606,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 7547900312859801793}
         m_TargetAssemblyTypeName: OptionPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Slider
+        m_MethodName: PlaySoundSlider
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2618,7 +2618,7 @@ MonoBehaviour:
         m_CallState: 2
       - m_Target: {fileID: 7547900312859801793}
         m_TargetAssemblyTypeName: OptionPanel, Assembly-CSharp
-        m_MethodName: SetVolume_SFX
+        m_MethodName: SetVolumeSFX
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2764,7 +2764,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 7547900312859801793}
         m_TargetAssemblyTypeName: OptionPanel, Assembly-CSharp
-        m_MethodName: PlaySound_DropDown_Press
+        m_MethodName: PlaySoundDropDownPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3089,7 +3089,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 7547900312859801793}
         m_TargetAssemblyTypeName: OptionPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Slider
+        m_MethodName: PlaySoundSlider
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
