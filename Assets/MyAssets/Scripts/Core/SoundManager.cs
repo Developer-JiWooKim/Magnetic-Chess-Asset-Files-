@@ -36,7 +36,9 @@ namespace Assets.MyAssets.Scripts.Core
         {
             _bgmPlayer.playOnAwake = true;
             _bgmPlayer.loop = true;
-            PlayBGM(BgmName.Title);
+
+            // 어떤 곡을 트는지는 씬의 컨트롤러가 정한다(TitleUIController · MatchUIController).
+            // 여기서 타이틀 곡을 틀면 타이틀로 "돌아왔을" 때와 처음 켰을 때가 달라진다.
 
             SetVolumeBGM(DataManager.Instance.data.volumeBgm);
             SetVolumeSFX(DataManager.Instance.data.volumeSfx);
@@ -81,10 +83,10 @@ namespace Assets.MyAssets.Scripts.Core
                 {
                     _sfxPlayer[j].clip = _sfx[(int)sfxName];
                     _sfxPlayer[j].Play();
+                    Debug.Log("사운드 재생");
                     return;
                 }
             }
-            Debug.Log("All SFX Player is Playing!!");
         }
     }
 }

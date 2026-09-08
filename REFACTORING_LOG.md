@@ -1436,3 +1436,200 @@ private void FixedUpdate()
 ---
 
 <!-- 이후 작업은 이 아래에 최신순으로 추가 -->
+
+# Phase 6 — UI 구조 개편
+
+지금까지는 코드 안쪽을 고쳤다. 이번에는 **UI가 씬에 놓인 방식** 자체를 바꾼다.
+버튼 배선을 인스펙터에서 코드로 옮기던 중, 고칠 때마다 예상 못 한 것이 튀어나온 원인이
+개별 버그가 아니라 구조였기 때문이다. 계획은 `UI_REFACTORING_PLAN.md`,
+에디터에서 손으로 해야 하는 씬 작업은 `UI_SCENE_MIGRATION.md` 에 따로 뒀다.
+
+- **기준 커밋:** `800c4ea`
+- **엔진:** Unity 6000.5.3f1 (URP 17.5)
+- **검증:** `dotnet build` — 오류 0, 우리 소스 경로 경고 0
+  (남은 경고 2건은 `Assets/External Assets/SlimUI` 의 기존 것)
+
+---
+
+### 0. 착수 전 확인 (계획서 8절)
+
+에디터를 열지 않고 씬 YAML을 파싱해 채웠다.
+
+**TitleScene**
+
+| 오브젝트 | 내용 |
+|---|---|
+| `Canvas_Menu` (Overlay, `MenuManager` 보유) | `Start Panel`, `GameSettingPanel`(프리팹), `Mode Select Panel`(프리팹) |
+| `Canvas_DontDestroyMenu` (Overlay, `DontDestroyMenu` 보유) | `Help Button`, `MenuBar`(→`Menu List`→Exit/Resume/List/Option), `Help Panel`, `Resume Panel`, `Exit Panel`, `Loading Window`(+`Percent`), `Option Panel`(프리팹) |
+| `Tablet_UI` | **씬 루트**의 프리팹 인스턴스. World Space, `m_Camera: 0`. `Setting_UI`, `Select_UI` 보유 |
+| `Meshes/Tablet_Window` | 태블릿 메시(별개 오브젝트) |
+
+**GameScene**
+
+| 오브젝트 | 내용 |
+|---|---|
+| `Menu_Canvas` (Overlay, `MenuManager` + `AddResumeAction` 보유) | `StartButton`, `ResultPanel`, `PreventTouchScreenImage`, `Background`, `GameSettingPanel`(프리팹), `Mode Select Panel`(프리팹) |
+| `InGameUI_Canvas` (`InGameUIManager`) | `Player_Panel`(+`Turn Text`), `Player_Panel_1/2`(프리팹) |
+
+**계획서와 달랐던 것**
+
+- 2.1절이 "같은 패널 프리팹이 두 곳에 인스턴스"의 예로 태블릿을 들었지만,
+  실제 복제본은 **TitleScene과 GameScene이 각각 들고 있는 `GameSettingPanel` · `Mode Select Panel`** 이었다.
+  태블릿은 자체 프리팹(`Tablet_UI`)이고 그 안에 별도의 `GameSettingMenu` 를 하나 더 갖고 있었다.
+- 태블릿 캔버스에는 `GraphicRaycaster` 가 **있다**. 클릭을 못 받은 이유는 그것이 아니라
+  World Space인데 `m_Camera` 가 비어 있어서다. 재도입 시 승격이 더 쉬워졌다는 뜻이다.
+- 로딩(`Loading Window`)·페이드는 전부 `Canvas_DontDestroyMenu` 소속이었다.
+  이것이 S5의 가장 큰 걸림돌이었다 — 아래 "로딩 화면을 둘로 쪼갠 이유" 참고.
+
+---
+
+### 1. 무엇이 사라졌나
+
+| 없어진 것 | 대신 |
+|---|---|
+| `DontDestroyMenu` | `GameManager.NextTitleEntry` (타이틀로 돌아갈 때의 시작 화면만 넘긴다) |
+| `MenuManager` | `TitleUIController` / `MatchUIController` |
+| `PanelBase` · `UIPanelName` · `panelName` | 컨트롤러가 패널을 필드로 직접 참조 |
+| `AddResumeAction` | `MatchUIController` 가 자기 `ResumePanel` 을 구독 |
+| `TabletLogic` | 복제본이 없어짐 |
+| `ListButton` · `OptionButton` · `ExitButton` · `ResumeButton` | `MenuList._items` (무엇을 토글할지 목록으로 들고 있다) |
+| `GameSettingPanel.OnClickGamePlayButtonGameScene` | 씬마다 컨트롤러가 다르므로 이중 경로 불필요 |
+| `ResultPanel` 의 `FindObjectOfType` 2곳 | 결과 패널이 이벤트만 올리고 컨트롤러가 받는다 |
+| `MenuBar` · `MenuList` · `ResumeButton` 의 씬 분기 | 인스펙터 값 (`_expandedWidth`, `_spacing`, `SetResumeAvailable`) |
+| `GameManager.ChangeSceneAction` | `LoadProgressChanged` (로딩 화면만 구독) |
+
+**코드에서 `FindObjectOfType` 이 완전히 사라졌다.** (남은 것은 왜 없앴는지 적은 주석뿐)
+
+---
+
+### 2. 무엇이 생겼나
+
+| 새 파일 | 하는 일 |
+|---|---|
+| `MainMenu/TitleUIController.cs` | 타이틀 UI의 유일한 진입점. `ShowModeSelect` / `ShowGameSetting` / `StartMatch` |
+| `Match/MatchUIController.cs` | 대전 UI의 유일한 진입점. 결과·이어하기·시작 버튼을 조율 |
+| `UI/CommonMenu.cs` | 두 씬이 함께 쓰는 메뉴 묶음(프리팹 루트) |
+| `UI/LoadingScreen.cs` | 씬을 **떠날 때** 화면을 덮고 진행도를 보여준다 |
+| `UI/SceneFadeIn.cs` | 씬에 **들어올 때** 덮인 화면을 걷는다 |
+
+---
+
+### 3. 단계별
+
+### S0 — 태블릿 복제 UI 제거
+
+`TabletLogic` 삭제. `CameraAnimationEvent` 가 태블릿 대신 `TitleUIController` 에 알리도록 바꿨다.
+애니메이션 이벤트 이름도 함께 고쳤다: `CameraMoving.anim` 의 `LoadingUIShow` → `OnCameraArrivedAtMenu`.
+
+에셋 삭제(`Tablet_UI` 인스턴스·프리팹)는 절차서 2절.
+
+### S1 — `GameManager` 씬 전환 API
+
+```csharp
+public void LoadMatch();                 // 타이틀 → 대전
+public void ReloadMatch();               // 판 재시작 = 씬 다시 읽기
+public void LoadTitle(TitleEntry entry); // 대전 → 타이틀 (Start / ModeSelect)
+public event Action<float> LoadProgressChanged;
+```
+
+`GameManager` 는 로딩 UI를 모른다. 진행도를 이벤트로만 내보내고 화면은 `LoadingScreen` 이 그린다.
+
+**고친 김에 잡은 버그.** 예전 로딩 표시는 `AsyncOperation.progress` 를 그대로 %로 썼는데,
+`allowSceneActivation = false` 이면 progress는 0.9에서 멈춘다. 그래서 화면이 90%에서 멎었다가
+4초 뒤 갑자기 넘어갔다. 지금은 진행도와 최소 시간 중 뒤처진 쪽을 보여준다.
+
+### S2 — 구독 해제
+
+씬을 다시 읽는 순간 구독 해제가 필수가 된다. 이벤트를 붙이는 모든 곳에 `OnDestroy` 짝을 넣었다.
+
+`Singleton<T>` 에도 `OnDestroy` 를 추가했다. `_instance` 는 static이라 씬 로드로 초기화되지 않는다.
+Unity가 파괴된 객체를 null처럼 보이게 해 주긴 하지만 그 동작에 기대지 않고 직접 끊는다.
+
+### S3 — `MatchUIController`
+
+`ResultPanel` 이 `ResumePanel` · `ExitPanel` 을 직접 부르던 것을 이벤트로 바꿨다
+(`ReplayRequested` / `SelectModeRequested` / `QuitRequested`).
+이 셋을 받는 곳이 `MatchUIController` 하나뿐이라 두 패널을 런타임에 찾을 이유가 없어졌다.
+
+`ResumePanel` 에 `_continueButton` 필드를 추가했다(계속하기 = 그냥 닫기).
+예전에는 인스펙터에서 `SetActive(false)` 로 처리하던 것이다.
+
+### S4 — `TitleUIController` + `CommonMenu`
+
+패널은 서로를 모른다. 각자 자기 버튼을 배선하고 "무슨 일이 있었다"만 알린다.
+
+```
+StartPanel.StartRequested     → 페이드 아웃 후 카메라 MoveStart
+CameraAnimationEvent          → OnCameraArrivedAtMenu → ShowModeSelect
+ModeSelectPanel.ModeSelected  → SetGameMode → ShowGameSetting
+GameSettingPanel.BackRequested→ ShowModeSelect
+GameSettingPanel.PlayRequested→ StartMatch (덮기 → LoadMatch)
+```
+
+계획서 4절의 제약을 지켰다:
+
+```csharp
+public event Action<TitleScreen> ScreenChanged;   // Start · ModeSelect · GameSetting · Loading
+```
+
+지금은 아무도 구독하지 않는다. 태블릿을 다시 넣을 때 그 뷰가 이것만 구독하면 따라오게 하려고 남겼다.
+
+### S5 — `DontDestroyOnLoad` 해제
+
+영구 객체는 `GameManager` · `DataManager` · `SoundManager` 셋만 남는다.
+
+**BGM 소유권을 옮겼다.** `SoundManager.Setup()` 이 시작할 때 타이틀 곡을 틀던 것을 뺐다.
+그대로 두면 "처음 켰을 때"와 "대전에서 타이틀로 돌아왔을 때"가 달라진다.
+이제 각 씬의 컨트롤러가 `Start` 에서 자기 곡을 튼다.
+
+**로딩 화면을 둘로 쪼갠 이유.** 예전에는 로딩 창이 `DontDestroyOnLoad` 캔버스에 있어서
+다음 씬까지 따라간 뒤 거기서 걷혔다. 영구 캔버스를 떼면 그 창은 씬과 함께 파괴된다.
+그래서 덮는 쪽(`LoadingScreen`)과 걷는 쪽(`SceneFadeIn`)을 서로 다른 씬의 컴포넌트로 나눴다.
+씬을 다시 읽는 재시작에서도 같은 짝이 그대로 돈다.
+
+### S6 — 검사기 뒤집기
+
+`UnityEventBindingValidator` 에 엄격 모드를 추가했다.
+
+- 기존: `Tools > Magnetic Chess > Validate UnityEvent Bindings` — **끊어진** 바인딩을 찾는다
+- 추가: `Tools > Magnetic Chess > Validate No Inspector Bindings` — **남아 있는** 바인딩을 전부 보고한다
+
+두 번째의 목표는 0건이다. 0건이 되면 인스펙터에 조용히 죽을 문자열이 하나도 없다.
+
+---
+
+### 4. 계획서 밖에서 고친 것
+
+### 비활성 패널의 배선이 통째로 빠지는 함정
+
+버튼 배선을 `Awake` 에 적으면, 그 패널이 씬에 **비활성 상태로** 놓여 있을 때 `Awake` 가 돌지 않는다.
+처음 열 때까지 아무 증상이 없다가 버튼만 조용히 먹통이 된다.
+`Help Panel` · `Exit Panel` · `Resume Panel` 처럼 꺼진 채로 시작하는 패널이 정확히 이 조건이다.
+
+`UIPanel` 이 배선 시점을 들고 있게 바꿨다.
+
+```csharp
+protected virtual void Bind() { }     // 파생 클래스는 Awake 대신 이것을 적는다
+protected virtual void Unbind() { }
+protected void EnsureBound();         // Awake와 Show 양쪽에서 부르되 한 번만 실행
+```
+
+배치 순서에 상관없이 배선이 보장된다. 이 개편의 목적이 "조용히 죽는 배선을 없애는 것"인데,
+그 자리에 같은 종류의 함정을 새로 만들 수는 없었다.
+
+### 옵션 창을 여는 것만으로 슬라이더 효과음이 나던 것
+
+`_sliderBGM.value = ...` 는 `onValueChanged` 를 돌린다. `SetValueWithoutNotify` 로 바꿨다.
+값을 맞추는 시점도 `Start` 에서 `Show` 로 옮겼다 — 꺼진 채 시작하면 `Start` 가 돌지 않는다.
+
+---
+
+### 5. 남은 것 · 하지 않은 것
+
+- **씬·프리팹 재구성** — `UI_SCENE_MIGRATION.md` 의 절차. 에디터에서 직접.
+- **태블릿 재도입** — 계획서 4절대로 보류. World Space 승격(1번 안)이 여전히 유력하다.
+  `Tablet_UI` 캔버스에 `GraphicRaycaster` 는 이미 있었으므로 `worldCamera` 만 지정하면 된다.
+- **`SoundManager.PlaySFX` 의 `Debug.Log("사운드 재생")`** — 효과음마다 콘솔에 찍힌다.
+  이번 범위 밖이라 두었다. 플레이 테스트가 시끄러우면 지운다.
+- **`GameSettingMenu.OnEnable` 의 기본값 되돌리기** — 설정값은 기본으로 돌아가지만
+  드롭다운 표시는 이전 선택 그대로 남는다. 이전부터 있던 어긋남이고 이번 개편과 무관하다.

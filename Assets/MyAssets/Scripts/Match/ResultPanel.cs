@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,6 +6,14 @@ using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.Match
 {
+    /// <summary>
+    /// 판이 끝났을 때의 결과 화면.
+    ///
+    /// 예전에는 다시하기 · 모드선택 · 종료를 처리하려고 ResumePanel과 ExitPanel을
+    /// FindObjectOfType으로 찾았다. 두 패널이 다른 씬(DontDestroyOnLoad 캔버스)에 있어
+    /// 인스펙터로 연결할 수 없었기 때문이다.
+    /// 지금은 무엇을 하려는지만 알리고, 누가 그것을 처리하는지는 MatchUIController가 안다.
+    /// </summary>
     public sealed class ResultPanel : UIPanel
     {
         [SerializeField] private TextMeshProUGUI _winPlayerText;
@@ -15,35 +24,27 @@ namespace Assets.MyAssets.Scripts.Match
         [SerializeField] private Button _selectModeButton;
         [SerializeField] private Button _quitButton;
 
-        private ResumePanel _resumePanel;
-        private ExitPanel _exitPanel;
+        public event Action ReplayRequested;
+        public event Action SelectModeRequested;
+        public event Action QuitRequested;
 
         // 클릭 소리는 UIBinder가 붙여준다. 핸들러는 하는 일만 적는다.
-        private void Awake()
+        protected override void Bind()
         {
             UIBinder.Bind(_replayButton, OnClickReplayButton, this, nameof(_replayButton));
             UIBinder.Bind(_selectModeButton, OnClickSelectModeButton, this, nameof(_selectModeButton));
             UIBinder.Bind(_quitButton, OnClickQuitButton, this, nameof(_quitButton));
         }
 
-        private void OnDestroy()
+        protected override void Unbind()
         {
             UIBinder.Unbind(_replayButton);
             UIBinder.Unbind(_selectModeButton);
             UIBinder.Unbind(_quitButton);
-        }
 
-        private void Start()
-        {
-            Setup();
-        }
-
-        public void Setup()
-        {
-            // ResumePanel · ExitPanel은 DontDestroyOnLoad 메뉴 캔버스에 있어 이 씬의
-            // 인스펙터로는 연결할 수 없다. UI를 씬별로 분리하면(L5) 이 조회는 사라진다.
-            _resumePanel = FindObjectOfType<ResumePanel>(true);
-            _exitPanel = FindObjectOfType<ExitPanel>(true);
+            ReplayRequested = null;
+            SelectModeRequested = null;
+            QuitRequested = null;
         }
 
         public void ResultInitialize(string winPlayer, int endTurn)
@@ -52,28 +53,10 @@ namespace Assets.MyAssets.Scripts.Match
             _endTurnText.text = "End Turn - " + endTurn.ToString();
         }
 
-        private void OnClickReplayButton()
-        {
-            if (_resumePanel != null)
-            {
-                _resumePanel.RequestReplay();
-            }
-        }
+        private void OnClickReplayButton() => ReplayRequested?.Invoke();
 
-        private void OnClickSelectModeButton()
-        {
-            if (_resumePanel != null)
-            {
-                _resumePanel.RequestSelectMode();
-            }
-        }
+        private void OnClickSelectModeButton() => SelectModeRequested?.Invoke();
 
-        private void OnClickQuitButton()
-        {
-            if (_exitPanel != null)
-            {
-                _exitPanel.Show();
-            }
-        }
+        private void OnClickQuitButton() => QuitRequested?.Invoke();
     }
 }

@@ -1,5 +1,5 @@
 using UnityEngine;
-using Assets.MyAssets.Scripts.Core;
+using UnityEngine.UI;
 
 namespace Assets.MyAssets.Scripts.UI
 {
@@ -7,16 +7,33 @@ namespace Assets.MyAssets.Scripts.UI
     {
         [SerializeField] private GameObject _exitPanel;
 
-        public override void Show() => _exitPanel.SetActive(true);
+        [Header("Buttons")]
+        [SerializeField] private Button _yesButton;
+        [SerializeField] private Button _noButton;
+
+        protected override void Bind()
+        {
+            UIBinder.Bind(_yesButton, OnClickYesButton, this, nameof(_yesButton));
+            UIBinder.Bind(_noButton, Hide, this, nameof(_noButton));
+        }
+
+        protected override void Unbind()
+        {
+            UIBinder.Unbind(_yesButton);
+            UIBinder.Unbind(_noButton);
+        }
+
+        public override void Show()
+        {
+            EnsureBound();
+            _exitPanel.SetActive(true);
+        }
+
         public override void Hide() => _exitPanel.SetActive(false);
 
-        public void OnClickExitYesButton()
+        private void OnClickYesButton()
         {
             Application.Quit();
-        }
-        public void PlaySoundButtonPress()
-        {
-            SoundManager.Instance.PlaySFX(SoundManager.SfxName.ButtonPress);
         }
     }
 }

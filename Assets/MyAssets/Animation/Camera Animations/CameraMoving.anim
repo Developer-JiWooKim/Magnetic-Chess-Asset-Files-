@@ -552,7 +552,7 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 6.15
-    functionName: LoadingUIShow
+    functionName: OnCameraArrivedAtMenu
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

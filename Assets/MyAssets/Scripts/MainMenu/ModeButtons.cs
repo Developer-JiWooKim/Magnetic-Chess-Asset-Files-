@@ -1,31 +1,52 @@
-using System.Linq;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
-
+using Assets.MyAssets.Scripts.Core;
 
 namespace Assets.MyAssets.Scripts.MainMenu
 {
+    /// <summary>모드 버튼들을 한데 묶어, 어느 것이 눌렸든 하나의 이벤트로 내보낸다.</summary>
     public sealed class ModeButtons : MonoBehaviour
     {
-        [SerializeField] private List<ModeBase> _buttons;
+        private ModeBase[] _buttons;
 
-        private void Start() => Setup();
+        public event Action<GameMode> ModeSelected;
+
+        private void Awake() => Setup();
 
         private void Setup()
         {
-            _buttons = GetComponentsInChildren<ModeBase>().ToList();
+            _buttons = GetComponentsInChildren<ModeBase>(true);
 
-            if (_buttons == null)
+            if (_buttons.Length == 0)
             {
-                Debug.Log("ModeButtons.cs - Setup() : _buttons is null!!");
+                Debug.LogError(nameof(ModeButtons) + ": 자식에서 모드 버튼을 찾지 못했다.", this);
                 return;
             }
 
-            _buttons.ForEach(modeButton =>
+            for (int i = 0; i < _buttons.Length; i++)
             {
-                modeButton.Setup();
-                modeButton.PreparingMode();
-            });
+                _buttons[i].Setup();
+                _buttons[i].PreparingMode();
+                _buttons[i].Selected += OnModeSelected;
+            }
         }
+
+        private void OnDestroy()
+        {
+            if (_buttons != null)
+            {
+                for (int i = 0; i < _buttons.Length; i++)
+                {
+                    if (_buttons[i] != null)
+                    {
+                        _buttons[i].Selected -= OnModeSelected;
+                    }
+                }
+            }
+
+            ModeSelected = null;
+        }
+
+        private void OnModeSelected(GameMode mode) => ModeSelected?.Invoke(mode);
     }
 }

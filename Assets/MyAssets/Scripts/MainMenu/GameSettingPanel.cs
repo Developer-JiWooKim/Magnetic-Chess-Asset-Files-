@@ -1,46 +1,62 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 using Assets.MyAssets.Scripts.Core;
-using Assets.MyAssets.Scripts.Match;
 using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.MainMenu
 {
-    public sealed class GameSettingPanel : PanelBase
+    /// <summary>
+    /// 조각 수 · 대기 시간 · 최대 턴을 고르고 판을 시작하는 패널.
+    ///
+    /// 예전에는 이 패널이 씬 로드까지 직접 시켰고, DontDestroyOnLoad 캔버스에 있어
+    /// 대전 씬에서도 살아남는 탓에 GameScene 전용 경로(OnClickGamePlayButtonGameScene)를
+    /// 따로 들고 있었다. 지금은 씬마다 UI가 따로라 그 두 번째 경로가 필요 없다.
+    /// </summary>
+    public sealed class GameSettingPanel : UIPanel
     {
         [SerializeField] private GameObject _pieceCountAIOption;
-        [SerializeField] private GameObject _fadeWindow;
-        [SerializeField] private Animator _animatorCamera;
         [SerializeField] private CanvasGroup _canvasGroup;
+
+        [Header("Buttons")]
+        [SerializeField] private Button _playButton;
+        [SerializeField] private Button _backButton;
 
         private Coroutine _runtimeCoroutine = null;
 
         private const float FADE_TIME = 0.2f;
 
-        private void Start() => Setup();
-        private void Setup()
+        /// <summary>시작 버튼이 눌렸다.</summary>
+        public event Action PlayRequested;
+
+        /// <summary>뒤로 버튼이 눌렸다.</summary>
+        public event Action BackRequested;
+
+        protected override void Bind()
         {
-            panelName = UIPanelName.GameSetting;
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+            }
+
+            UIBinder.Bind(_playButton, OnClickPlayButton, this, nameof(_playButton));
+            UIBinder.Bind(_backButton, OnClickBackButton, this, nameof(_backButton));
         }
 
-        private void ModeAISetting()
+        protected override void Unbind()
         {
-            if (GameManager.Instance.CurrentSetting.gameMode == GameMode.AI)
-            {
-                _pieceCountAIOption.SetActive(true);
-            }
-            else
-            {
-                _pieceCountAIOption.SetActive(false);
-            }
+            UIBinder.Unbind(_playButton);
+            UIBinder.Unbind(_backButton);
+
+            PlayRequested = null;
+            BackRequested = null;
         }
-        private void AsyncLoadScene()
-        {
-            GameManager.Instance.AsyncLoadGameScene();
-        }
+
         public override void Show()
         {
-            if (gameObject.activeSelf == true)
+            EnsureBound();
+
+            if (gameObject.activeSelf)
             {
                 return;
             }
@@ -52,8 +68,10 @@ namespace Assets.MyAssets.Scripts.MainMenu
             gameObject.SetActive(true);
 
             ModeAISetting();
-            _runtimeCoroutine = StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_canvasGroup, FADE_TIME, () => _runtimeCoroutine = null));
+            _runtimeCoroutine = StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_canvasGroup, FADE_TIME,
+                () => _runtimeCoroutine = null));
         }
+
         public override void Hide()
         {
             if (!gameObject.activeSelf)
@@ -63,38 +81,21 @@ namespace Assets.MyAssets.Scripts.MainMenu
             if (_runtimeCoroutine != null)
             {
                 StopCoroutine(_runtimeCoroutine);
+                _runtimeCoroutine = null;
             }
 
             _pieceCountAIOption.SetActive(false);
             gameObject.SetActive(false);
         }
 
-        public void OnClickGamePlayButton()
+        /// <summary>AI 모드일 때만 AI 조각 수 항목을 보여준다.</summary>
+        private void ModeAISetting()
         {
-            if (_animatorCamera != null)
-            {
-                _animatorCamera.SetTrigger("PlayStart");
-            }
-
-            StartCoroutine(FadeEffectUI.FadeOutCanvasGroup(_canvasGroup, 0.1f));
-            _fadeWindow.SetActive(true);
-            StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_fadeWindow.GetComponent<CanvasGroup>(), 1.5f, AsyncLoadScene));
+            _pieceCountAIOption.SetActive(GameManager.Instance.CurrentSetting.gameMode == GameMode.AI);
         }
 
-        public void OnClickGamePlayButtonGameScene()
-        {
-            // 이 패널은 DontDestroyOnLoad 캔버스에 있어 TitleScene에서도 살아있으므로,
-            // GameScene에서만 존재하는 GameDirector는 클릭 시점에 조회한다.
-            GameDirector director = GameDirector.Instance;
+        private void OnClickPlayButton() => PlayRequested?.Invoke();
 
-            if (director != null)
-            {
-                director.Setup();
-            }
-            else
-            {
-                Debug.Log("GameDirector is null!");
-            }
-        }
+        private void OnClickBackButton() => BackRequested?.Invoke();
     }
 }

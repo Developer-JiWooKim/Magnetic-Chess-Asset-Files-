@@ -27,6 +27,14 @@ namespace Assets.MyAssets.EditorTools
     {
         private const string SEARCH_FOLDER = "Assets/MyAssets";
         private const string MENU_PATH = "Tools/Magnetic Chess/Validate UnityEvent Bindings";
+        private const string STRICT_MENU_PATH = "Tools/Magnetic Chess/Validate No Inspector Bindings";
+
+        /// <summary>
+        /// 켜면 "끊어진 바인딩"이 아니라 "남아 있는 바인딩"을 전부 보고한다.
+        /// UI 배선을 코드로 옮기는 작업이 끝났는지 확인하는 용도다.
+        /// 목표는 0건이고, 0건이 되면 인스펙터에 조용히 죽는 문자열이 하나도 남지 않는다.
+        /// </summary>
+        private static bool _strict;
 
         public enum Severity
         {
@@ -55,14 +63,31 @@ namespace Assets.MyAssets.EditorTools
             }
         }
 
+        [MenuItem(STRICT_MENU_PATH)]
+        private static void ValidateStrictFromMenu()
+        {
+            _strict = true;
+            try
+            {
+                Report(Validate(), "인스펙터에 남은 UnityEvent 바인딩 없음.");
+            }
+            finally
+            {
+                _strict = false;
+            }
+        }
+
         [MenuItem(MENU_PATH)]
         private static void ValidateFromMenu()
         {
-            List<BindingIssue> issues = Validate();
+            Report(Validate(), "끊어진 UnityEvent 바인딩 없음.");
+        }
 
+        private static void Report(List<BindingIssue> issues, string emptyMessage)
+        {
             if (issues.Count == 0)
             {
-                Debug.Log("[BindingValidator] 끊어진 UnityEvent 바인딩 없음.");
+                Debug.Log("[BindingValidator] " + emptyMessage);
                 return;
             }
 
@@ -273,6 +298,11 @@ namespace Assets.MyAssets.EditorTools
                 if (hasTarget == false && hasMethod == false)
                 {
                     // 인스펙터에서 슬롯만 늘리고 비워 둔 상태. 실제로 아무 일도 하지 않는다.
+                    if (_strict)
+                    {
+                        issues.Add(new BindingIssue(Severity.Warning, assetPath, objectPath,
+                            where + " -> 빈 슬롯 (인스펙터에 남은 바인딩)"));
+                    }
                     continue;
                 }
 
@@ -297,6 +327,13 @@ namespace Assets.MyAssets.EditorTools
                 {
                     issues.Add(new BindingIssue(Severity.Error, assetPath, objectPath,
                         where + " -> " + target.GetType().Name + "에 '" + methodName + "' 메소드가 없다"));
+                }
+                else if (_strict)
+                {
+                    // 지금은 살아 있는 바인딩이다. 그래도 인스펙터에 문자열로 남아 있는 한
+                    // 메소드 이름이 바뀌는 순간 조용히 죽는다. 코드로 옮겨야 할 대상이다.
+                    issues.Add(new BindingIssue(Severity.Warning, assetPath, objectPath,
+                        where + " -> " + target.GetType().Name + "." + methodName + " (인스펙터에 남은 바인딩)"));
                 }
             }
         }

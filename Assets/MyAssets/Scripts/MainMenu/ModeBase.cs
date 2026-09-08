@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using Assets.MyAssets.Scripts.Core;
@@ -9,8 +10,8 @@ namespace Assets.MyAssets.Scripts.MainMenu
     /// 모드 선택 버튼의 공통 동작. 파생 클래스는 "어느 모드인가"와
     /// "아직 준비 중인가" 두 가지만 말하면 된다.
     ///
-    /// 예전에는 파생 세 클래스가 PreparingMode()를 글자 단위로 똑같이 복붙하고 있었다.
-    /// 차이는 isPreparing 초기값 하나뿐이었다.
+    /// 예전에는 눌렸을 때 상위에서 MenuManager를 찾아 화면 전환까지 직접 시켰다.
+    /// 지금은 "이 모드가 골렸다"만 알리고, 그 다음은 TitleUIController가 정한다.
     /// </summary>
     public abstract class ModeBase : MonoBehaviour
     {
@@ -24,7 +25,9 @@ namespace Assets.MyAssets.Scripts.MainMenu
         public bool IsPreparing => isPreparing;
 
         private Button _button;
-        private MenuManager _menuManager;
+
+        /// <summary>이 버튼이 골라진 모드를 알린다. ModeButtons가 구독한다.</summary>
+        public event Action<GameMode> Selected;
 
         /// <summary>이 버튼이 고르는 대전 모드.</summary>
         protected abstract GameMode Mode { get; }
@@ -34,10 +37,9 @@ namespace Assets.MyAssets.Scripts.MainMenu
 
         private void Awake()
         {
-            // 버튼은 이 오브젝트에, 메뉴 매니저는 상위에 있다.
-            // 타입으로 찾으므로 인스펙터에 연결할 것이 없고, 따라서 빠뜨릴 것도 없다.
+            // 버튼은 이 오브젝트에 있다. 타입으로 찾으므로 인스펙터에 연결할 것이 없고,
+            // 따라서 빠뜨릴 것도 없다.
             _button = GetComponent<Button>();
-            _menuManager = GetComponentInParent<MenuManager>(true);
 
             UIBinder.Bind(_button, OnClickModeButton, this, nameof(_button));
         }
@@ -45,6 +47,7 @@ namespace Assets.MyAssets.Scripts.MainMenu
         private void OnDestroy()
         {
             UIBinder.Unbind(_button);
+            Selected = null;
         }
 
         /// <summary>ModeButtons가 시작할 때 호출한다.</summary>
@@ -67,17 +70,6 @@ namespace Assets.MyAssets.Scripts.MainMenu
             }
         }
 
-        private void OnClickModeButton()
-        {
-            GameManager.Instance.SetGameMode(Mode);
-
-            if (_menuManager == null)
-            {
-                Debug.LogError(GetType().Name + ": 상위에서 MenuManager를 찾지 못했다.", this);
-                return;
-            }
-
-            _menuManager.ChangeModeSelectToGameSetting();
-        }
+        private void OnClickModeButton() => Selected?.Invoke(Mode);
     }
 }

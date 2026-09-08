@@ -1,111 +1,113 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using Assets.MyAssets.Scripts.Core;
 
 namespace Assets.MyAssets.Scripts.UI
 {
+    /// <summary>
+    /// 메뉴 목록을 펼치고 접는 가로 막대.
+    ///
+    /// 예전에는 펼친 너비를 DontDestroyMenu.CurrentScene으로 분기해 정했다(타이틀 365 / 게임 470).
+    /// 지금은 CommonMenu 프리팹이 씬마다 따로 배치되므로, 그 값은 인스펙터에 적으면 된다.
+    /// </summary>
     public sealed class MenuBar : MonoBehaviour
     {
         [SerializeField] private RectTransform _background;
         [SerializeField] private MenuList _menu;
-        [SerializeField] private float _sizeUpSpeed = 1000f;
-        [SerializeField] private bool _isShowList = false;
+        [SerializeField] private Button _listButton;
 
-        private struct MenuBarSize
+        [Header("Size")]
+        [SerializeField] private float _sizeUpSpeed = 1000f;
+        [SerializeField] private float _collapsedWidth = 130f;
+
+        /// <summary>펼쳤을 때의 너비. 타이틀은 365, 대전 씬은 470을 쓴다.</summary>
+        [SerializeField] private float _expandedWidth = 365f;
+
+        private bool _isShowList;
+        private Coroutine _currCor;
+
+        public bool IsExpanded => _isShowList;
+
+        private void Awake()
         {
-            public float beforeX;
-            public float afterX;
+            UIBinder.Bind(_listButton, Toggle, this, nameof(_listButton),
+                SoundManager.SfxName.MenuButtonPress);
         }
 
-        private MenuBarSize _titleMenuBarSize;
-        private MenuBarSize _gameMenuBarSize;
-
-        // consts
-        private const float TITLE_BEFORE_X = 130f;
-        private const float TITLE_AFTER_X = 365f;
-
-        private const float GAME_BEFORE_X = 130f;
-        private const float GAME_AFTER_X = 470f;
-
-        private Coroutine _currCor = null;
+        private void OnDestroy()
+        {
+            UIBinder.Unbind(_listButton);
+        }
 
         private void Start() => Setup();
+
         private void Setup()
         {
-            _titleMenuBarSize = new MenuBarSize
-            {
-                beforeX = TITLE_BEFORE_X,
-                afterX = TITLE_AFTER_X
-            };
-
-            _gameMenuBarSize = new MenuBarSize
-            {
-                beforeX = GAME_BEFORE_X,
-                afterX = GAME_AFTER_X
-            };
-
-            _background.GetComponent<RectTransform>().sizeDelta =
-                new Vector2(TITLE_BEFORE_X, _background.GetComponent<RectTransform>().sizeDelta.y);
+            _isShowList = false;
+            SetWidth(_collapsedWidth);
         }
 
-        private IEnumerator IncreaseBar(float beforeX, float afterX)
+        /// <summary>목록이 펼쳐져 있으면 접는다. 메뉴 항목을 고른 뒤에 부른다.</summary>
+        public void Collapse()
         {
-            _background.sizeDelta = new Vector2(beforeX, _background.sizeDelta.y);
-
-            while (_background.sizeDelta.x <= afterX)
+            if (_isShowList)
             {
-                _background.sizeDelta = new Vector2(_background.sizeDelta.x + Time.deltaTime * _sizeUpSpeed, _background.sizeDelta.y);
-                yield return null;
+                Toggle();
             }
-            _background.sizeDelta = new Vector2(afterX, _background.sizeDelta.y);
-            EndAnimation();
         }
 
-        private IEnumerator DecreaseBar(float beforeX, float afterX)
-        {
-            _background.sizeDelta = new Vector2(afterX, _background.sizeDelta.y);
-            EndAnimation();
-            while (_background.sizeDelta.x >= beforeX)
-            {
-                _background.sizeDelta = new Vector2(_background.sizeDelta.x - Time.deltaTime * _sizeUpSpeed, _background.sizeDelta.y);
-                yield return null;
-            }
-            _background.sizeDelta = new Vector3(beforeX, _background.sizeDelta.y);
-        }
-
-        private void EndAnimation()
-        {
-            _isShowList = !_isShowList;
-            _menu.OnClickListButton();
-        }
-        public void OnClickMenuListButton()
+        public void Toggle()
         {
             if (_currCor != null)
             {
                 StopCoroutine(_currCor);
             }
 
-            DontDestroyMenu.SceneName curScene = DontDestroyMenu.Instance.CurrentScene;
-
-            MenuBarSize currentScene =
-                curScene == DontDestroyMenu.SceneName.Title ? _titleMenuBarSize : _gameMenuBarSize;
-
-            if (_isShowList)
-            {
-                _currCor = StartCoroutine(DecreaseBar(currentScene.beforeX, currentScene.afterX));
-            }
-            else
-            {
-                _currCor = StartCoroutine(IncreaseBar(currentScene.beforeX, currentScene.afterX));
-            }
+            _currCor = _isShowList
+                ? StartCoroutine(DecreaseBar())
+                : StartCoroutine(IncreaseBar());
         }
-        public void PlaySoundMenuButtonPress()
+
+        private IEnumerator IncreaseBar()
         {
-            SoundManager.Instance.PlaySFX(SoundManager.SfxName.MenuButtonPress);
+            SetWidth(_collapsedWidth);
+
+            while (_background.sizeDelta.x <= _expandedWidth)
+            {
+                SetWidth(_background.sizeDelta.x + Time.deltaTime * _sizeUpSpeed);
+                yield return null;
+            }
+
+            SetWidth(_expandedWidth);
+            EndAnimation();
+            _currCor = null;
         }
-        public void PlaySoundButtonPress()
+
+        private IEnumerator DecreaseBar()
         {
-            SoundManager.Instance.PlaySFX(SoundManager.SfxName.ButtonPress);
+            SetWidth(_expandedWidth);
+            EndAnimation();
+
+            while (_background.sizeDelta.x >= _collapsedWidth)
+            {
+                SetWidth(_background.sizeDelta.x - Time.deltaTime * _sizeUpSpeed);
+                yield return null;
+            }
+
+            SetWidth(_collapsedWidth);
+            _currCor = null;
+        }
+
+        private void SetWidth(float width)
+        {
+            _background.sizeDelta = new Vector2(width, _background.sizeDelta.y);
+        }
+
+        private void EndAnimation()
+        {
+            _isShowList = !_isShowList;
+            _menu.SetVisible(_isShowList);
         }
     }
 }
