@@ -6,9 +6,9 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetContact : MonoBehaviour
     {
-        [SerializeField] private bool isContact;
+        [SerializeField] private bool _isContact;
 
-        public bool IsContact => isContact;
+        public bool IsContact => _isContact;
 
         /// <summary>
         /// 이 자석볼이 올라가 있는 스폰 지점. GameObject로 들고 있으면 해제할 때마다
@@ -19,14 +19,14 @@ namespace Assets.MyAssets.Scripts.Magnet
         private void Awake() => Setup();
         private void Setup()
         {
-            isContact = false;
+            _isContact = false;
             spawnPoint = null;
         }
 
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (isContact)
+            if (_isContact)
             {
                 return;
             }
@@ -35,7 +35,7 @@ namespace Assets.MyAssets.Scripts.Magnet
                 // 자석볼끼리 붙으면 그만큼 확정 대기 시간을 늘려준다.
                 GameDirector.Instance.ExtendConfirmTime(GameManager.Instance.CurrentSetting.waitingTime * 0.5f);
 
-                isContact = true;
+                _isContact = true;
             }
         }
 
@@ -45,12 +45,12 @@ namespace Assets.MyAssets.Scripts.Magnet
             {
                 spawnPoint.ChangeIsEmpty();
             }
-            isContact = false;
+            _isContact = false;
         }
 
         private void OnEnable()
         {
-            isContact = false;
+            _isContact = false;
         }
     }
 }

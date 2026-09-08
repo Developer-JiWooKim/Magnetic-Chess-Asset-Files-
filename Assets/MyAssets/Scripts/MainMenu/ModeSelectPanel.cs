@@ -3,19 +3,19 @@ using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.MainMenu
 {
-    public sealed class ModeSelectPanel : Panel_Base
+    public sealed class ModeSelectPanel : PanelBase
     {
-        private CanvasGroup canvasGroup;
-        private Coroutine runtimeCoroutine = null;
+        private CanvasGroup _canvasGroup;
+        private Coroutine _runtimeCoroutine = null;
 
-        private const float __FADE_TIME = 0.2f;
+        private const float FADE_TIME = 0.2f;
 
         private void Awake() => Setup();
 
         private void Setup()
         {
-            canvasGroup = GetComponent<CanvasGroup>();
-            panel_Name = E_UI_Panel_Name.ModeSelect;
+            _canvasGroup = GetComponent<CanvasGroup>();
+            panelName = UIPanelName.ModeSelect;
         }
 
         public override void Show()
@@ -24,12 +24,12 @@ namespace Assets.MyAssets.Scripts.MainMenu
             {
                 return;
             }
-            if (runtimeCoroutine != null)
+            if (_runtimeCoroutine != null)
             {
-                StopCoroutine(runtimeCoroutine);
+                StopCoroutine(_runtimeCoroutine);
             }
             gameObject.SetActive(true);
-            runtimeCoroutine = StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(canvasGroup, __FADE_TIME));
+            _runtimeCoroutine = StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_canvasGroup, FADE_TIME));
         }
         public override void Hide()
         {
@@ -37,9 +37,9 @@ namespace Assets.MyAssets.Scripts.MainMenu
             {
                 return;
             }
-            if (runtimeCoroutine != null)
+            if (_runtimeCoroutine != null)
             {
-                StopCoroutine(runtimeCoroutine);
+                StopCoroutine(_runtimeCoroutine);
             }
             gameObject.SetActive(false);
         }

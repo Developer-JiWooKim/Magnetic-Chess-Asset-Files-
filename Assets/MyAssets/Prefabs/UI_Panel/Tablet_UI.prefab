@@ -116,7 +116,7 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
 --- !u!95 &6584151386869062520
 Animator:
-  serializedVersion: 5
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -130,6 +130,7 @@ Animator:
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
@@ -194,6 +195,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -251,10 +253,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9eebfea2fb989164495340694f8d3383, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  loading_UI: {fileID: 8079903374947889144}
-  select_UI: {fileID: 319548987950586409}
-  setting_UI: {fileID: 8879588841637258054}
-  modeSelectPanel: {fileID: 0}
+  _loadingUI: {fileID: 8079903374947889144}
+  _selectUI: {fileID: 319548987950586409}
+  _settingUI: {fileID: 8879588841637258054}
+  _modeSelectPanel: {fileID: 0}
 --- !u!1 &8879588841637258054
 GameObject:
   m_ObjectHideFlags: 0
@@ -449,6 +451,31 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 60.3
       objectReference: {fileID: 0}
+    - target: {fileID: 2661535571132108520, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 2974681139607479528, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 3618314001869504730, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 3946239515294259127, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 3946806269250871955, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
     - target: {fileID: 4437499820945618221, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: m_SizeDelta.x
@@ -468,6 +495,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 59.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 4582415448521650777, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
       objectReference: {fileID: 0}
     - target: {fileID: 5243045239089484222, guid: 1df35846939618045860f2a830272020,
         type: 3}
@@ -519,6 +551,16 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6313113633272386127, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 6443997258992830351, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
     - target: {fileID: 6806580236342834195, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_Target
@@ -533,6 +575,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
       value: GameSettingPanel, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6879568864300222824, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 6880788783063176818, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
       objectReference: {fileID: 0}
     - target: {fileID: 7151750575028264409, guid: 1df35846939618045860f2a830272020,
         type: 3}
@@ -577,7 +629,7 @@ PrefabInstance:
     - target: {fileID: 7311615184804721187, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: SetPieceCount_AI
+      value: SetPieceCountAI
       objectReference: {fileID: 0}
     - target: {fileID: 7768410663870707635, guid: 1df35846939618045860f2a830272020,
         type: 3}
@@ -615,6 +667,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_hasFontAssetChanged
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8232689233183826855, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
+      value: 1801810542
       objectReference: {fileID: 0}
     - target: {fileID: 8706187043912222654, guid: 1df35846939618045860f2a830272020,
         type: 3}

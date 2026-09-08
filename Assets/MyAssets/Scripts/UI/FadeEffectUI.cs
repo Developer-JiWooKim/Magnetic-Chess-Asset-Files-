@@ -5,10 +5,10 @@ using UnityEngine;
 
 namespace Assets.MyAssets.Scripts.UI
 {
-    public static class FadeEffect_UI
+    public static class FadeEffectUI
     {
         public static float fadeTime = 0.5f;
-        public static IEnumerator FadeIn_CanvasGroup(CanvasGroup canvasGroup, float _FadeInTime = 0.5f, Action action = null)
+        public static IEnumerator FadeInCanvasGroup(CanvasGroup canvasGroup, float fadeInTime = 0.5f, Action action = null)
         {
             float currentTime = 0.0f;
             float percent = 0.0f;
@@ -19,7 +19,7 @@ namespace Assets.MyAssets.Scripts.UI
             while (percent < 1f)
             {
                 currentTime += Time.deltaTime;
-                percent = currentTime / _FadeInTime;
+                percent = currentTime / fadeInTime;
                 canvasGroup.alpha = Mathf.Lerp(0, 1, percent);
                 yield return null;
             }
@@ -31,7 +31,7 @@ namespace Assets.MyAssets.Scripts.UI
                 action();
             }
         }
-        public static IEnumerator FadeIn_TextMeshPro(TextMeshProUGUI text, float _FadeInTime = 0.5f, Action action = null)
+        public static IEnumerator FadeInTextMeshPro(TextMeshProUGUI text, float fadeInTime = 0.5f, Action action = null)
         {
             float currentTime = 0.0f;
             float percent = 0.0f;
@@ -42,7 +42,7 @@ namespace Assets.MyAssets.Scripts.UI
             {
 
                 currentTime += Time.deltaTime;
-                percent = currentTime / _FadeInTime;
+                percent = currentTime / fadeInTime;
                 Color color = text.color;
                 color.a = Mathf.Lerp(0, 1, percent);
                 text.color = color;
@@ -53,7 +53,7 @@ namespace Assets.MyAssets.Scripts.UI
                 action();
             }
         }
-        public static IEnumerator FadeOut_CanvasGroup(CanvasGroup canvasGroup, float _FadeOutTime = 0.5f, Action action = null)
+        public static IEnumerator FadeOutCanvasGroup(CanvasGroup canvasGroup, float fadeOutTime = 0.5f, Action action = null)
         {
             float currentTime = 0.0f;
             float percent = 0.0f;
@@ -64,7 +64,7 @@ namespace Assets.MyAssets.Scripts.UI
             while (percent < 1f)
             {
                 currentTime += Time.deltaTime;
-                percent = currentTime / _FadeOutTime;
+                percent = currentTime / fadeOutTime;
                 canvasGroup.alpha = Mathf.Lerp(1, 0, percent);
 
                 yield return null;
@@ -76,7 +76,7 @@ namespace Assets.MyAssets.Scripts.UI
 
             canvasGroup.blocksRaycasts = true;
         }
-        public static IEnumerator FadeOut_TextMeshPro(TextMeshProUGUI text, float _FadeOutTime = 0.5f, Action action = null)
+        public static IEnumerator FadeOutTextMeshPro(TextMeshProUGUI text, float fadeOutTime = 0.5f, Action action = null)
         {
             float currentTime = 0.0f;
             float percent = 0.0f;
@@ -86,7 +86,7 @@ namespace Assets.MyAssets.Scripts.UI
             while (percent < 1f)
             {
                 currentTime += Time.deltaTime;
-                percent = currentTime / _FadeOutTime;
+                percent = currentTime / fadeOutTime;
                 Color color = text.color;
                 color.a = Mathf.Lerp(1, 0, percent);
                 text.color = color;

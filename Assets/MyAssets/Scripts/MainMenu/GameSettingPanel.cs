@@ -6,32 +6,32 @@ using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.MainMenu
 {
-    public sealed class GameSettingPanel : Panel_Base
+    public sealed class GameSettingPanel : PanelBase
     {
-        [SerializeField] private GameObject PieceCount_AI_Option;
-        [SerializeField] private GameObject fadeWindow;
-        [SerializeField] private Animator animator_Camera;
-        [SerializeField] private CanvasGroup canvasGroup;
+        [SerializeField] private GameObject _pieceCountAIOption;
+        [SerializeField] private GameObject _fadeWindow;
+        [SerializeField] private Animator _animatorCamera;
+        [SerializeField] private CanvasGroup _canvasGroup;
 
-        private Coroutine runtimeCoroutine = null;
+        private Coroutine _runtimeCoroutine = null;
 
-        private const float __FADE_TIME = 0.2f;
+        private const float FADE_TIME = 0.2f;
 
         private void Start() => Setup();
         private void Setup()
         {
-            panel_Name = E_UI_Panel_Name.GameSetting;
+            panelName = UIPanelName.GameSetting;
         }
 
-        private void ModeAI_Setting()
+        private void ModeAISetting()
         {
             if (GameManager.Instance.CurrentSetting.gameMode == GameMode.AI)
             {
-                PieceCount_AI_Option.SetActive(true);
+                _pieceCountAIOption.SetActive(true);
             }
             else
             {
-                PieceCount_AI_Option.SetActive(false);
+                _pieceCountAIOption.SetActive(false);
             }
         }
         private void AsyncLoadScene()
@@ -44,15 +44,15 @@ namespace Assets.MyAssets.Scripts.MainMenu
             {
                 return;
             }
-            if (runtimeCoroutine != null)
+            if (_runtimeCoroutine != null)
             {
-                StopCoroutine(runtimeCoroutine);
+                StopCoroutine(_runtimeCoroutine);
             }
 
             gameObject.SetActive(true);
 
-            ModeAI_Setting();
-            runtimeCoroutine = StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(canvasGroup, __FADE_TIME, () => runtimeCoroutine = null));
+            ModeAISetting();
+            _runtimeCoroutine = StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_canvasGroup, FADE_TIME, () => _runtimeCoroutine = null));
         }
         public override void Hide()
         {
@@ -60,28 +60,28 @@ namespace Assets.MyAssets.Scripts.MainMenu
             {
                 return;
             }
-            if (runtimeCoroutine != null)
+            if (_runtimeCoroutine != null)
             {
-                StopCoroutine(runtimeCoroutine);
+                StopCoroutine(_runtimeCoroutine);
             }
 
-            PieceCount_AI_Option.SetActive(false);
+            _pieceCountAIOption.SetActive(false);
             gameObject.SetActive(false);
         }
 
         public void OnClickGamePlayButton()
         {
-            if (animator_Camera != null)
+            if (_animatorCamera != null)
             {
-                animator_Camera.SetTrigger("PlayStart");
+                _animatorCamera.SetTrigger("PlayStart");
             }
 
-            StartCoroutine(FadeEffect_UI.FadeOut_CanvasGroup(canvasGroup, 0.1f));
-            fadeWindow.SetActive(true);
-            StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(fadeWindow.GetComponent<CanvasGroup>(), 1.5f, AsyncLoadScene));
+            StartCoroutine(FadeEffectUI.FadeOutCanvasGroup(_canvasGroup, 0.1f));
+            _fadeWindow.SetActive(true);
+            StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_fadeWindow.GetComponent<CanvasGroup>(), 1.5f, AsyncLoadScene));
         }
 
-        public void OnClickGamePlayButton_GameScene()
+        public void OnClickGamePlayButtonGameScene()
         {
             // 이 패널은 DontDestroyOnLoad 캔버스에 있어 TitleScene에서도 살아있으므로,
             // GameScene에서만 존재하는 GameDirector는 클릭 시점에 조회한다.

@@ -4,15 +4,15 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetBallSpawnPoint : MonoBehaviour
     {
-        [SerializeField] private bool isEmpty = true;
+        [SerializeField] private bool _isEmpty = true;
 
-        public bool IsEmpty => isEmpty;
+        public bool IsEmpty => _isEmpty;
 
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Magnet"))
             {
-                isEmpty = false;
+                _isEmpty = false;
 
                 if (other.TryGetComponent(out MagnetContact magnetContact))
                 {
@@ -27,7 +27,7 @@ namespace Assets.MyAssets.Scripts.Magnet
                 ChangeIsEmpty();
             }
         }
-        public void ChangeIsEmpty() => isEmpty = true;
-        public void Initialize() => isEmpty = true;
+        public void ChangeIsEmpty() => _isEmpty = true;
+        public void Initialize() => _isEmpty = true;
     }
 }

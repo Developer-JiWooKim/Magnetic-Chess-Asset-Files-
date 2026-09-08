@@ -6,7 +6,7 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class OfflineMultiMode : ModeBase
     {
-        [SerializeField] private GameObject preparing;
+        [SerializeField] private GameObject _preparing;
 
         public override void Setup() => isPreparing = false;
 
@@ -14,12 +14,12 @@ namespace Assets.MyAssets.Scripts.MainMenu
         {
             if (IsPreparing)
             {
-                preparing.SetActive(true);
+                _preparing.SetActive(true);
                 gameObject.GetComponent<Button>().interactable = false;
             }
             else
             {
-                preparing.SetActive(false);
+                _preparing.SetActive(false);
                 gameObject.GetComponent<Button>().interactable = true;
             }
         }

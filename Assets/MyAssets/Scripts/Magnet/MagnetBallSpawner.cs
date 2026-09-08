@@ -6,28 +6,28 @@ namespace Assets.MyAssets.Scripts.Magnet
 {
     public sealed class MagnetBallSpawner : MonoBehaviour
     {
-        [SerializeField] private GameObject magnetBallPrefab;
+        [SerializeField] private GameObject _magnetBallPrefab;
 
-        private ObjectPool<GameObject> pool;
+        private ObjectPool<GameObject> _pool;
 
         /// <summary>
         /// 현재 판에 나와 있는 자석볼. ObjectPool&lt;T&gt;는 활성 객체를 열거하는 API가 없어서
         /// Get/Release 콜백에서 직접 관리한다.
         /// </summary>
-        private readonly List<GameObject> activeMagnetBalls = new();
-        public IReadOnlyList<GameObject> ActiveMagnetBalls => activeMagnetBalls;
+        private readonly List<GameObject> _activeMagnetBalls = new();
+        public IReadOnlyList<GameObject> ActiveMagnetBalls => _activeMagnetBalls;
 
         /// <summary>
         /// 위 목록과 같은 순서로 유지되는 MagnetContact 캐시. 턴이 끝날 때마다 자석볼 전체를
         /// 훑으며 GetComponent를 부르지 않도록, 풀에서 꺼낼 때 한 번만 찾아 둔다.
         /// </summary>
-        private readonly List<MagnetContact> activeMagnetContacts = new();
-        public IReadOnlyList<MagnetContact> ActiveMagnetContacts => activeMagnetContacts;
+        private readonly List<MagnetContact> _activeMagnetContacts = new();
+        public IReadOnlyList<MagnetContact> ActiveMagnetContacts => _activeMagnetContacts;
 
         private void Awake()
         {
-            pool = new ObjectPool<GameObject>(
-                createFunc: () => Instantiate(magnetBallPrefab),
+            _pool = new ObjectPool<GameObject>(
+                createFunc: () => Instantiate(_magnetBallPrefab),
                 actionOnGet: OnGetMagnetBall,
                 actionOnRelease: OnReleaseMagnetBall,
                 actionOnDestroy: magnetBall => Destroy(magnetBall));
@@ -35,8 +35,8 @@ namespace Assets.MyAssets.Scripts.Magnet
 
         private void OnGetMagnetBall(GameObject magnetBall)
         {
-            activeMagnetBalls.Add(magnetBall);
-            activeMagnetContacts.Add(magnetBall.GetComponent<MagnetContact>());
+            _activeMagnetBalls.Add(magnetBall);
+            _activeMagnetContacts.Add(magnetBall.GetComponent<MagnetContact>());
 
             magnetBall.SetActive(true);
         }
@@ -44,11 +44,11 @@ namespace Assets.MyAssets.Scripts.Magnet
         private void OnReleaseMagnetBall(GameObject magnetBall)
         {
             // 두 목록은 같은 순서를 유지해야 하므로 인덱스를 찾아 함께 지운다.
-            int index = activeMagnetBalls.IndexOf(magnetBall);
+            int index = _activeMagnetBalls.IndexOf(magnetBall);
             if (index >= 0)
             {
-                activeMagnetBalls.RemoveAt(index);
-                activeMagnetContacts.RemoveAt(index);
+                _activeMagnetBalls.RemoveAt(index);
+                _activeMagnetContacts.RemoveAt(index);
             }
 
             magnetBall.transform.position = Vector3.zero;
@@ -57,7 +57,7 @@ namespace Assets.MyAssets.Scripts.Magnet
 
         public void SpawnMagnetBall(Vector3 pos, Quaternion rot)
         {
-            GameObject magnetBall = pool.Get();
+            GameObject magnetBall = _pool.Get();
             magnetBall.transform.SetPositionAndRotation(pos, rot);
         }
 
@@ -67,15 +67,15 @@ namespace Assets.MyAssets.Scripts.Magnet
             {
                 return;
             }
-            pool.Release(magnetBall);
+            _pool.Release(magnetBall);
         }
 
         public void DeactivateAllMagnetBall()
         {
-            // Release 콜백이 activeMagnetBalls를 수정하므로 뒤에서부터 순회한다.
-            for (int i = activeMagnetBalls.Count - 1; i >= 0; i--)
+            // Release 콜백이 _activeMagnetBalls를 수정하므로 뒤에서부터 순회한다.
+            for (int i = _activeMagnetBalls.Count - 1; i >= 0; i--)
             {
-                pool.Release(activeMagnetBalls[i]);
+                _pool.Release(_activeMagnetBalls[i]);
             }
         }
 
@@ -84,7 +84,7 @@ namespace Assets.MyAssets.Scripts.Magnet
         /// </summary>
         public void InstantiateMagnetBall(int magnetBallCount)
         {
-            int shortage = magnetBallCount - pool.CountAll;
+            int shortage = magnetBallCount - _pool.CountAll;
             if (shortage <= 0)
             {
                 return;
@@ -94,11 +94,11 @@ namespace Assets.MyAssets.Scripts.Magnet
             List<GameObject> warmedUp = new List<GameObject>(shortage);
             for (int i = 0; i < shortage; i++)
             {
-                warmedUp.Add(pool.Get());
+                warmedUp.Add(_pool.Get());
             }
             foreach (GameObject magnetBall in warmedUp)
             {
-                pool.Release(magnetBall);
+                _pool.Release(magnetBall);
             }
         }
     }

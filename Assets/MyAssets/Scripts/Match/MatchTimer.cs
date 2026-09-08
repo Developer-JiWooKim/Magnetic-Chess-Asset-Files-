@@ -8,21 +8,21 @@ namespace Assets.MyAssets.Scripts.Match
     /// </summary>
     public sealed class MatchTimer
     {
-        private float remainingTime;
+        private float _remainingTime;
 
         /// <summary>UI에 표시할 남은 시간. 음수로 내려가지 않는다.</summary>
-        public float DisplayTime => Mathf.Max(remainingTime, 0f);
+        public float DisplayTime => Mathf.Max(_remainingTime, 0f);
 
-        public bool IsFinished => remainingTime <= 0f;
+        public bool IsFinished => _remainingTime <= 0f;
 
         public void Begin(float duration)
         {
-            remainingTime = duration;
+            _remainingTime = duration;
         }
 
         public void Tick(float deltaTime)
         {
-            remainingTime -= deltaTime;
+            _remainingTime -= deltaTime;
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace Assets.MyAssets.Scripts.Match
         /// </summary>
         public void ExtendTime(float seconds)
         {
-            remainingTime += seconds;
+            _remainingTime += seconds;
         }
     }
 }

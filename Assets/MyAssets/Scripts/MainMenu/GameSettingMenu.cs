@@ -7,13 +7,13 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class GameSettingMenu : MonoBehaviour
     {
-        [SerializeField] private TMP_Dropdown pieceCountDropdown;
+        [SerializeField] private TMP_Dropdown _pieceCountDropdown;
 
-        [SerializeField] private TMP_Dropdown pieceCountDropdown_AI;
+        [SerializeField] private TMP_Dropdown _pieceCountDropdownAI;
 
-        [SerializeField] private TMP_Dropdown waitingTimeDropdown;
+        [SerializeField] private TMP_Dropdown _waitingTimeDropdown;
 
-        [SerializeField] private TMP_Dropdown maxTurnDropdown;
+        [SerializeField] private TMP_Dropdown _maxTurnDropdown;
 
         private void OnEnable()
         {
@@ -21,43 +21,43 @@ namespace Assets.MyAssets.Scripts.MainMenu
         }
         public void SetPieceCount()
         {
-            string option = pieceCountDropdown.options[pieceCountDropdown.value].text;
-            int option_value = int.Parse(option);
-            GameManager.Instance.SetPieceCount(option_value);
+            string option = _pieceCountDropdown.options[_pieceCountDropdown.value].text;
+            int optionValue = int.Parse(option);
+            GameManager.Instance.SetPieceCount(optionValue);
         }
-        public void SetPieceCount_AI()
+        public void SetPieceCountAI()
         {
-            string option = pieceCountDropdown_AI.options[pieceCountDropdown_AI.value].text;
-            int option_value = int.Parse(option);
-            GameManager.Instance.SetPieceCount_AI(option_value);
+            string option = _pieceCountDropdownAI.options[_pieceCountDropdownAI.value].text;
+            int optionValue = int.Parse(option);
+            GameManager.Instance.SetPieceCountAI(optionValue);
         }
         public void SetWaitingTime()
         {
-            string option = waitingTimeDropdown.options[waitingTimeDropdown.value].text;
-            string option_int = Regex.Replace(option, @"[^0-9]", "");
-            int option_value = int.Parse(option_int);
-            GameManager.Instance.SetWaitingTime(option_value);
+            string option = _waitingTimeDropdown.options[_waitingTimeDropdown.value].text;
+            string optionDigits = Regex.Replace(option, @"[^0-9]", "");
+            int optionValue = int.Parse(optionDigits);
+            GameManager.Instance.SetWaitingTime(optionValue);
         }
         public void SetMaxTurn()
         {
-            string option = maxTurnDropdown.options[maxTurnDropdown.value].text;
-            int option_value;
+            string option = _maxTurnDropdown.options[_maxTurnDropdown.value].text;
+            int optionValue;
             if (option == "Infinity")
             {
-                option_value = 999;
+                optionValue = 999;
             }
             else
             {
-                option_value = int.Parse(option);
+                optionValue = int.Parse(option);
             }
 
 
-            GameManager.Instance.SetMaxTurn(option_value);
+            GameManager.Instance.SetMaxTurn(optionValue);
         }
         public void SetDefaultSetting()
         {
             GameManager.Instance.SetPieceCount(15);
-            GameManager.Instance.SetPieceCount_AI(15);
+            GameManager.Instance.SetPieceCountAI(15);
             GameManager.Instance.SetWaitingTime(1);
             GameManager.Instance.SetMaxTurn(20);
         }

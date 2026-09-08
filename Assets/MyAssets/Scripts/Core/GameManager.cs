@@ -9,17 +9,17 @@ namespace Assets.MyAssets.Scripts.Core
 {
     public sealed class GameManager : Singleton<GameManager>
     {
-        [SerializeField] private GameSetting gameSetting;
-        [SerializeField] private GameObject loadingWindow;
-        [SerializeField] private GameObject percent;
+        [SerializeField] private GameSetting _gameSetting;
+        [SerializeField] private GameObject _loadingWindow;
+        [SerializeField] private GameObject _percent;
 
-        public GameSetting CurrentSetting => gameSetting;
+        public GameSetting CurrentSetting => _gameSetting;
 
-        public void SetGameMode(GameMode mode) => gameSetting.gameMode = mode;
-        public void SetPieceCount(int count) => gameSetting.pieceCount = count;
-        public void SetPieceCount_AI(int count) => gameSetting.pieceCount_AI = count;
-        public void SetWaitingTime(float seconds) => gameSetting.waitingTime = seconds;
-        public void SetMaxTurn(int turn) => gameSetting.maxTurn = turn;
+        public void SetGameMode(GameMode mode) => _gameSetting.gameMode = mode;
+        public void SetPieceCount(int count) => _gameSetting.pieceCount = count;
+        public void SetPieceCountAI(int count) => _gameSetting.pieceCountAI = count;
+        public void SetWaitingTime(float seconds) => _gameSetting.waitingTime = seconds;
+        public void SetMaxTurn(int turn) => _gameSetting.maxTurn = turn;
 
         public event Action ChangeSceneAction;
 
@@ -28,14 +28,14 @@ namespace Assets.MyAssets.Scripts.Core
         {
             Application.targetFrameRate = 60;
 
-            if (DataManager.Instance.data.isFirst == 0)
+            if (DataManager.Instance.data.isFirstRun == 0)
             {
                 DefaultGameOption();
             }
 
             DefaultGameSetting();
 
-            ChangeSceneAction += DontDestroy_Menu.Instance.ChangeGameScene;
+            ChangeSceneAction += DontDestroyMenu.Instance.ChangeGameScene;
         }
 
         private void DefaultGameOption()
@@ -44,10 +44,10 @@ namespace Assets.MyAssets.Scripts.Core
 
             SoundManager.Instance.SetDefaultVolume();
 
-            data.volume_value_SFX = .5f;
-            data.volume_value_BGM = .5f;
+            data.volumeSfx = .5f;
+            data.volumeBgm = .5f;
 
-            data.isFirst = 1;
+            data.isFirstRun = 1;
 
             DataManager.Instance.data = data;
         }
@@ -57,7 +57,7 @@ namespace Assets.MyAssets.Scripts.Core
         }
         private void DefaultGameSetting()
         {
-            gameSetting = new GameSetting
+            _gameSetting = new GameSetting
             {
                 gameMode = GameMode.OfflineMulti,
                 pieceCount = 20,
@@ -68,22 +68,22 @@ namespace Assets.MyAssets.Scripts.Core
 
         public void AsyncLoadGameScene()
         {
-            SoundManager.Instance.Stop_BGM();
+            SoundManager.Instance.StopBGM();
 
-            SoundManager.Instance.Play_BGM(SoundManager.E_BGM_Name.SCENE_CHANGE);
+            SoundManager.Instance.PlayBGM(SoundManager.BgmName.SceneChange);
 
             StartCoroutine(AsyncLoadScene());
         }
 
         private IEnumerator AsyncLoadScene()
         {
-            loadingWindow.SetActive(true);
-            percent.SetActive(true);
+            _loadingWindow.SetActive(true);
+            _percent.SetActive(true);
 
             AsyncOperation asyncLoad = SceneManager.LoadSceneAsync("GameScene");
             asyncLoad.allowSceneActivation = false;
 
-            TextMeshProUGUI percentText = percent.GetComponentInChildren<TextMeshProUGUI>();
+            TextMeshProUGUI percentText = _percent.GetComponentInChildren<TextMeshProUGUI>();
 
             int progressPercentage = 0;
             float time = 0;
@@ -110,12 +110,12 @@ namespace Assets.MyAssets.Scripts.Core
 
             ChangeSceneAction();
 
-            percent.SetActive(false);
-            StartCoroutine(FadeEffect_UI.FadeOut_CanvasGroup(loadingWindow.GetComponent<CanvasGroup>(), 1f,
+            _percent.SetActive(false);
+            StartCoroutine(FadeEffectUI.FadeOutCanvasGroup(_loadingWindow.GetComponent<CanvasGroup>(), 1f,
                 () =>
                 {
-                    SoundManager.Instance.Play_BGM(SoundManager.E_BGM_Name.GAME);
-                    loadingWindow.SetActive(false);
+                    SoundManager.Instance.PlayBGM(SoundManager.BgmName.Game);
+                    _loadingWindow.SetActive(false);
                 }));
         }
     }

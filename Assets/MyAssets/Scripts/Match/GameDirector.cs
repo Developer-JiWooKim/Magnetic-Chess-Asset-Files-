@@ -11,44 +11,44 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class GameDirector : Singleton<GameDirector>
     {
-        [SerializeField] private MagnetBallSpawner magnetBallSpawner;
-        [SerializeField] private MagnetWorld magnetWorld;
-        [SerializeField] private CameraView cameraView;
-        [SerializeField] private InGameUI_Manager inGameUI_Manager;
-        [SerializeField] private Result_Panel result_Panel;
-        [SerializeField] private AI_FSM aiFSM;
-        [SerializeField] private GameObject preventImage;
+        [SerializeField] private MagnetBallSpawner _magnetBallSpawner;
+        [SerializeField] private MagnetWorld _magnetWorld;
+        [SerializeField] private CameraView _cameraView;
+        [SerializeField] private InGameUIManager _inGameUIManager;
+        [SerializeField] private ResultPanel _resultPanel;
+        [SerializeField] private AIFSM _aiFSM;
+        [SerializeField] private GameObject _preventImage;
 
-        private List<Player> playerList = new();
+        private List<Player> _playerList = new();
 
         protected override bool IsPersistent => false;
 
         // consts
-        private const int __PLAYER__1 = 0;
-        private const int __PLAYER__2 = 1;
-        private const int __TURN_INFINITY__ = 100;
-        private const float __SPAWN__POINT_Y = 0.7f;
+        private const int PLAYER_1_INDEX = 0;
+        private const int PLAYER_2_INDEX = 1;
+        private const int TURN_INFINITY = 100;
+        private const float SPAWN_POINT_Y = 0.7f;
 
-        private readonly TurnStateMachine turnState = new TurnStateMachine();
-        private bool isTouch;
+        private readonly TurnStateMachine _turnState = new TurnStateMachine();
+        private bool _isTouch;
 
-        private readonly MatchTimer matchTimer = new MatchTimer();
+        private readonly MatchTimer _matchTimer = new MatchTimer();
 
         /// <summary>
         /// 자석볼 충돌처럼 결과가 아직 확정되지 않았을 때 대기 시간을 늘린다(MagnetContact에서 호출).
         /// </summary>
-        public void ExtendConfirmTime(float seconds) => matchTimer.ExtendTime(seconds);
+        public void ExtendConfirmTime(float seconds) => _matchTimer.ExtendTime(seconds);
 
-        private GameSetting currentSetting;
+        private GameSetting _currentSetting;
         public bool isPlaying { get; private set; }
 
         /// <summary>
         /// 터치할 때마다 Camera.main 조회와 LayerMask.NameToLayer 문자열 조회를 반복하지 않도록
         /// 한 번만 구해 둔다. 결과 패널 CanvasGroup도 판이 끝날 때마다 찾을 이유가 없다.
         /// </summary>
-        private Camera mainCamera;
-        private int spawnRaycastLayerMask;
-        private CanvasGroup result_Panel_CanvasGroup;
+        private Camera _mainCamera;
+        private int _spawnRaycastLayerMask;
+        private CanvasGroup _resultPanelCanvasGroup;
 
         /// <summary>
         /// 캐싱해 두되, 어떤 이유로든 비어 있으면 그때 한 번 더 찾는다.
@@ -58,11 +58,11 @@ namespace Assets.MyAssets.Scripts.Match
         {
             get
             {
-                if (mainCamera == null)
+                if (_mainCamera == null)
                 {
-                    mainCamera = Camera.main;
+                    _mainCamera = Camera.main;
                 }
-                return mainCamera;
+                return _mainCamera;
             }
         }
 
@@ -71,9 +71,9 @@ namespace Assets.MyAssets.Scripts.Match
         {
             base.Awake();
 
-            mainCamera = Camera.main;
-            spawnRaycastLayerMask = (-1) - (1 << LayerMask.NameToLayer("SpawnPoint"));
-            result_Panel_CanvasGroup = result_Panel.GetComponent<CanvasGroup>();
+            _mainCamera = Camera.main;
+            _spawnRaycastLayerMask = (-1) - (1 << LayerMask.NameToLayer("SpawnPoint"));
+            _resultPanelCanvasGroup = _resultPanel.GetComponent<CanvasGroup>();
         }
 
         private void Start() => Setup();
@@ -85,35 +85,35 @@ namespace Assets.MyAssets.Scripts.Match
 
         private void GameFSM()
         {
-            switch (turnState.Current)
+            switch (_turnState.Current)
             {
-                case E_GameState.None:
+                case GameState.None:
                     BattleStart();
                     break;
-                case E_GameState.Player_1:
-                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[turnState.CurrentPlayerIndex].playerName);
+                case GameState.Player1:
+                    _inGameUIManager.CurrentTurnPlayerPanelEffect(_playerList[_turnState.CurrentPlayerIndex].playerName);
                     break;
-                case E_GameState.Player_2:
-                    inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[turnState.CurrentPlayerIndex].playerName);
+                case GameState.Player2:
+                    _inGameUIManager.CurrentTurnPlayerPanelEffect(_playerList[_turnState.CurrentPlayerIndex].playerName);
 
-                    if (currentSetting.gameMode == GameMode.AI)
+                    if (_currentSetting.gameMode == GameMode.AI)
                     {
-                        isTouch = true;
+                        _isTouch = true;
 
-                        Invoke(nameof(AI_SpawnAndStartTimer), 0.5f);
+                        Invoke(nameof(AISpawnAndStartTimer), 0.5f);
                     }
                     break;
-                case E_GameState.End:
+                case GameState.End:
                     EndBattle();
                     break;
             }
         }
         private void BattleStart()
         {
-            preventImage.SetActive(true);
-            turnState.BeginFirstTurn();
+            _preventImage.SetActive(true);
+            _turnState.BeginFirstTurn();
 
-            cameraView.ChangeCameraView(cameraView.TopView_tr, () => preventImage.SetActive(false));
+            _cameraView.ChangeCameraView(_cameraView.TopView, () => _preventImage.SetActive(false));
             GameFSM();
         }
         private void PlayerTouchScreen()
@@ -123,7 +123,7 @@ namespace Assets.MyAssets.Scripts.Match
                 return;
             }
 
-            if (isTouch == true)
+            if (_isTouch == true)
             {
                 return;
             }
@@ -135,81 +135,81 @@ namespace Assets.MyAssets.Scripts.Match
 
             if (Input.GetMouseButtonDown(0))
             {
-                isTouch = true;
+                _isTouch = true;
                 SpawnAndStartTimer();
             }
         }
         private IEnumerator StartTimer()
         {
-            matchTimer.Begin(currentSetting.waitingTime);
+            _matchTimer.Begin(_currentSetting.waitingTime);
 
-            int player_index = turnState.CurrentPlayerIndex;
+            int playerIndex = _turnState.CurrentPlayerIndex;
 
-            while (!matchTimer.IsFinished)
+            while (!_matchTimer.IsFinished)
             {
-                matchTimer.Tick(Time.deltaTime);
-                inGameUI_Manager.UpdateUI_WaitingTime_Text(matchTimer.DisplayTime, playerList[player_index].playerName);
+                _matchTimer.Tick(Time.deltaTime);
+                _inGameUIManager.UpdateUIWaitingTimeText(_matchTimer.DisplayTime, _playerList[playerIndex].playerName);
                 yield return null;
             }
 
-            magnetWorld.IsActive = false;
+            _magnetWorld.IsActive = false;
 
 
             bool isContact = IncreasePieceCount() > 0;
 
 
-            inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
+            _inGameUIManager.UpdateUIChessPieceText(_playerList[playerIndex].PieceCount, _playerList[playerIndex].playerName);
 
 
             if (isContact)
             {
                 // 반납하면 목록이 줄어들므로 뒤에서부터 순회한다.
-                IReadOnlyList<MagnetContact> activeMagnetContacts = magnetBallSpawner.ActiveMagnetContacts;
+                IReadOnlyList<MagnetContact> activeMagnetContacts = _magnetBallSpawner.ActiveMagnetContacts;
                 for (int i = activeMagnetContacts.Count - 1; i >= 0; i--)
                 {
                     MagnetContact magnetContact = activeMagnetContacts[i];
                     if (magnetContact.IsContact)
                     {
-                        magnetBallSpawner.DeactivateMagnetBall(magnetContact.gameObject);
+                        _magnetBallSpawner.DeactivateMagnetBall(magnetContact.gameObject);
                     }
                 }
             }
 
 
-            bool someoneEmptiedPieces = playerList.Find(player => player.PieceCount <= 0) != null;
+            bool someoneEmptiedPieces = _playerList.Find(player => player.PieceCount <= 0) != null;
 
-            bool maxTurnReached = currentSetting.maxTurn < __TURN_INFINITY__
-                                  && turnState.IsMaxTurnReached(currentSetting.maxTurn);
+            bool maxTurnReached = _currentSetting.maxTurn < TURN_INFINITY
+                                  && _turnState.IsMaxTurnReached(_currentSetting.maxTurn);
 
             // 조각을 다 털어낸 사람이 승리한다. 조각 수는 자기 턴에만 변하므로(놓으면 -1, 붙으면 +N)
             // 0이 된 사람은 항상 현재 턴 플레이어다.
             if (someoneEmptiedPieces)
             {
                 isPlaying = false;
-                turnState.FinishWith(turnState.Current);
+                _turnState.FinishWith(_turnState.Current);
                 GameFSM();
             }
             // 최대 턴까지 아무도 못 털어냈으면 남은 조각이 더 적은 쪽이 승리한다.
             else if (maxTurnReached)
             {
                 isPlaying = false;
-                turnState.FinishWith(DecideWinnerByFewestPieces());
+                _turnState.FinishWith(DecideWinnerByFewestPieces());
                 GameFSM();
             }
 
             else
             {
-                if (turnState.Current == E_GameState.Player_2)
+                if (_turnState.Current == GameState.Player2)
                 {
-                    turnState.IncreaseTurnCount();
-                    inGameUI_Manager.UpdateUI_TurnText(turnState.TurnCount);
+                    _turnState.IncreaseTurnCount();
+                    _inGameUIManager.UpdateUITurnText(_turnState.TurnCount);
                 }
 
-                turnState.ChangeTurn();
+                _turnState.ChangeTurn();
 
-                isTouch = false;
+                _isTouch = false;
 
-                SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.CHANGE_TURN);
+                SoundManager.Instance.PlaySFX(SoundManager.SfxName.ChangeTurn);
 
                 GameFSM();
             }
@@ -218,109 +218,109 @@ namespace Assets.MyAssets.Scripts.Match
         {
             Ray ray = MainCamera.ScreenPointToRay(Input.mousePosition);
 
-            bool isHit = Physics.Raycast(ray, out RaycastHit hit, 100f, spawnRaycastLayerMask);
+            bool isHit = Physics.Raycast(ray, out RaycastHit hit, 100f, _spawnRaycastLayerMask);
 
 
             if (isHit && hit.collider.CompareTag("Board"))
             {
                 Vector3 hitPos = hit.point;
-                hitPos.y = __SPAWN__POINT_Y;
+                hitPos.y = SPAWN_POINT_Y;
 
-                magnetWorld.IsActive = true;
+                _magnetWorld.IsActive = true;
 
-                SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
-                magnetBallSpawner.SpawnMagnetBall(hitPos, Random.rotation);
+                SoundManager.Instance.PlaySFX(SoundManager.SfxName.MagnetBallSpawn);
+                _magnetBallSpawner.SpawnMagnetBall(hitPos, Random.rotation);
 
                 CurrentTurnPieceDecrease();
 
-                int player_index = turnState.CurrentPlayerIndex;
+                int playerIndex = _turnState.CurrentPlayerIndex;
 
-                inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
+                _inGameUIManager.UpdateUIChessPieceText(_playerList[playerIndex].PieceCount, _playerList[playerIndex].playerName);
             }
             else
             {
-                isTouch = false;
+                _isTouch = false;
                 return;
             }
 
             StartCoroutine(StartTimer());
         }
 
-        private void AI_SpawnAndStartTimer()
+        private void AISpawnAndStartTimer()
         {
-            Vector3 aiSpawnPoint = aiFSM.AIMagnetBallSpawnPoint();
-            aiSpawnPoint.y = __SPAWN__POINT_Y;
+            Vector3 aiSpawnPoint = _aiFSM.AIMagnetBallSpawnPoint();
+            aiSpawnPoint.y = SPAWN_POINT_Y;
 
-            magnetWorld.IsActive = true;
+            _magnetWorld.IsActive = true;
 
-            SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.MAGNETBALL_SPAWN);
-            magnetBallSpawner.SpawnMagnetBall(aiSpawnPoint, Random.rotation);
+            SoundManager.Instance.PlaySFX(SoundManager.SfxName.MagnetBallSpawn);
+            _magnetBallSpawner.SpawnMagnetBall(aiSpawnPoint, Random.rotation);
 
             CurrentTurnPieceDecrease();
 
-            int player_index = turnState.CurrentPlayerIndex;
+            int playerIndex = _turnState.CurrentPlayerIndex;
 
-            inGameUI_Manager.UpdateUI_ChessPiece_Text(playerList[player_index].PieceCount, playerList[player_index].playerName);
+            _inGameUIManager.UpdateUIChessPieceText(_playerList[playerIndex].PieceCount, _playerList[playerIndex].playerName);
 
             StartCoroutine(StartTimer());
         }
 
         private void CurrentTurnPieceDecrease()
         {
-            if (turnState.IsPlayerTurn == false)
+            if (_turnState.IsPlayerTurn == false)
             {
                 return;
             }
-            playerList[turnState.CurrentPlayerIndex].PieceCount--;
+            _playerList[_turnState.CurrentPlayerIndex].PieceCount--;
         }
         private void EndBattle()
         {
             StopAllCoroutines();
 
-            magnetBallSpawner.DeactivateAllMagnetBall();
+            _magnetBallSpawner.DeactivateAllMagnetBall();
 
 
-            inGameUI_Manager.Hide_All_Panel();
-            inGameUI_Manager.Hide_TurnText();
+            _inGameUIManager.HideAllPanel();
+            _inGameUIManager.HideTurnText();
 
-            result_Panel.Show();
+            _resultPanel.Show();
 
 
-            result_Panel.Result_Initialize(GetWinnerDisplayName(), turnState.TurnCount);
+            _resultPanel.ResultInitialize(GetWinnerDisplayName(), _turnState.TurnCount);
 
-            StartCoroutine(FadeEffect_UI.FadeIn_CanvasGroup(result_Panel_CanvasGroup, .3f));
+            StartCoroutine(FadeEffectUI.FadeInCanvasGroup(_resultPanelCanvasGroup, .3f));
         }
 
-        private void Initialize_GameSettings()
+        private void InitializeGameSettings()
         {
             // GameSetting은 struct라 여기서 값이 복사된다. 즉 이 시점 이후 GameManager 쪽 설정이
             // 바뀌어도 진행 중인 판에는 반영되지 않는다(판 시작 시점의 설정으로 끝까지 진행).
-            currentSetting = GameManager.Instance.CurrentSetting;
+            _currentSetting = GameManager.Instance.CurrentSetting;
 
-            if (playerList != null)
+            if (_playerList != null)
             {
-                playerList.Clear();
+                _playerList.Clear();
             }
 
             int totalPieceCount = 0;
 
-            switch (currentSetting.gameMode)
+            switch (_currentSetting.gameMode)
             {
                 case GameMode.OfflineMulti:
-                    playerList.Add(new Player(PlayerName.Player_1));
-                    playerList.Add(new Player(PlayerName.Player_2));
-                    playerList.ForEach(player => totalPieceCount += player.PieceCount = currentSetting.pieceCount);
+                    _playerList.Add(new Player(PlayerName.Player1));
+                    _playerList.Add(new Player(PlayerName.Player2));
+                    _playerList.ForEach(player => totalPieceCount += player.PieceCount = _currentSetting.pieceCount);
 
-                    magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
+                    _magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
                     break;
 
                 case GameMode.AI:
-                    playerList.Add(new Player(PlayerName.Player_1));
-                    playerList.Add(new Player(PlayerName.Player_AI));
-                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_1).PieceCount = currentSetting.pieceCount;
-                    totalPieceCount += playerList.Find(player => player.playerName == PlayerName.Player_AI).PieceCount = currentSetting.pieceCount_AI;
+                    _playerList.Add(new Player(PlayerName.Player1));
+                    _playerList.Add(new Player(PlayerName.PlayerAI));
+                    totalPieceCount += _playerList.Find(player => player.playerName == PlayerName.Player1).PieceCount = _currentSetting.pieceCount;
+                    totalPieceCount += _playerList.Find(player => player.playerName == PlayerName.PlayerAI).PieceCount = _currentSetting.pieceCountAI;
 
-                    magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
+                    _magnetBallSpawner.InstantiateMagnetBall(totalPieceCount);
                     break;
 
                 case GameMode.OnlineMulti:
@@ -331,37 +331,37 @@ namespace Assets.MyAssets.Scripts.Match
         /// <summary>
         /// 최대 턴까지 승부가 나지 않았을 때의 승자. 남은 조각이 더 적은 쪽이 이기고, 같으면 무승부다.
         /// </summary>
-        private E_GameState DecideWinnerByFewestPieces()
+        private GameState DecideWinnerByFewestPieces()
         {
-            int player1Pieces = playerList[__PLAYER__1].PieceCount;
-            int player2Pieces = playerList[__PLAYER__2].PieceCount;
+            int player1Pieces = _playerList[PLAYER_1_INDEX].PieceCount;
+            int player2Pieces = _playerList[PLAYER_2_INDEX].PieceCount;
 
             if (player1Pieces == player2Pieces)
             {
-                return E_GameState.None;
+                return GameState.None;
             }
-            return player1Pieces < player2Pieces ? E_GameState.Player_1 : E_GameState.Player_2;
+            return player1Pieces < player2Pieces ? GameState.Player1 : GameState.Player2;
         }
 
-        /// <summary>결과 화면에 표시할 승자 이름. AI 모드에서 Player_2는 "AI"로 보여준다.</summary>
+        /// <summary>결과 화면에 표시할 승자 이름. AI 모드에서 Player2는 "AI"로 보여준다.</summary>
         private string GetWinnerDisplayName()
         {
-            if (turnState.WinPlayer == E_GameState.None)
+            if (_turnState.WinPlayer == GameState.None)
             {
                 return "DRAW";
             }
-            if (currentSetting.gameMode == GameMode.AI && turnState.WinPlayer == E_GameState.Player_2)
+            if (_currentSetting.gameMode == GameMode.AI && _turnState.WinPlayer == GameState.Player2)
             {
                 return "AI";
             }
-            return turnState.WinPlayer.ToString();
+            return _turnState.WinPlayer.ToString();
         }
 
         private int IncreasePieceCount()
         {
             int contactMagnetBallCount = 0;
 
-            IReadOnlyList<MagnetContact> activeMagnetContacts = magnetBallSpawner.ActiveMagnetContacts;
+            IReadOnlyList<MagnetContact> activeMagnetContacts = _magnetBallSpawner.ActiveMagnetContacts;
             for (int i = 0; i < activeMagnetContacts.Count; i++)
             {
                 if (activeMagnetContacts[i].IsContact)
@@ -370,9 +370,9 @@ namespace Assets.MyAssets.Scripts.Match
                 }
             }
 
-            if (turnState.IsPlayerTurn)
+            if (_turnState.IsPlayerTurn)
             {
-                playerList[turnState.CurrentPlayerIndex].PieceCount += contactMagnetBallCount;
+                _playerList[_turnState.CurrentPlayerIndex].PieceCount += contactMagnetBallCount;
             }
 
             return contactMagnetBallCount;
@@ -381,27 +381,27 @@ namespace Assets.MyAssets.Scripts.Match
         public void GamePlay()
         {
             isPlaying = true;
-            preventImage.SetActive(true);
-            cameraView.ChangeCameraView(cameraView.TopView_tr,
-                () => preventImage.SetActive(false));
+            _preventImage.SetActive(true);
+            _cameraView.ChangeCameraView(_cameraView.TopView,
+                () => _preventImage.SetActive(false));
 
 
-            inGameUI_Manager.Show_All_Panel();
-            inGameUI_Manager.UpdateUI_TurnText(turnState.TurnCount + 1);
-            if (playerList != null)
+            _inGameUIManager.ShowAllPanel();
+            _inGameUIManager.UpdateUITurnText(_turnState.TurnCount + 1);
+            if (_playerList != null)
             {
-                playerList.ForEach(player =>
-                    inGameUI_Manager.UpdateUI_ChessPiece_Text(player.PieceCount, player.playerName));
-                playerList.ForEach(player => inGameUI_Manager.UpdateUI_WaitingTime_Text(0, player.playerName));
+                _playerList.ForEach(player =>
+                    _inGameUIManager.UpdateUIChessPieceText(player.PieceCount, player.playerName));
+                _playerList.ForEach(player => _inGameUIManager.UpdateUIWaitingTimeText(0, player.playerName));
             }
             else
             {
-                Debug.Log("playerList is null!!");
+                Debug.Log("_playerList is null!!");
             }
 
 
-            inGameUI_Manager.CurrentTurnPlayer_Panel_Effect(playerList[__PLAYER__1].playerName);
-            inGameUI_Manager.CurrentTurnPlayer_Panel_FadeIn_Effect();
+            _inGameUIManager.CurrentTurnPlayerPanelEffect(_playerList[PLAYER_1_INDEX].playerName);
+            _inGameUIManager.CurrentTurnPlayerPanelFadeInEffect();
 
 
             GameFSM();
@@ -409,40 +409,40 @@ namespace Assets.MyAssets.Scripts.Match
         public void Setup()
         {
 
-            preventImage.SetActive(true);
+            _preventImage.SetActive(true);
 
-            turnState.Reset();
+            _turnState.Reset();
 
             isPlaying = false;
-            isTouch = false;
+            _isTouch = false;
 
-            magnetWorld.IsActive = false;
+            _magnetWorld.IsActive = false;
 
-            Initialize_GameSettings();
+            InitializeGameSettings();
 
-            magnetBallSpawner.DeactivateAllMagnetBall();
+            _magnetBallSpawner.DeactivateAllMagnetBall();
 
-            if (currentSetting.gameMode == GameMode.AI)
+            if (_currentSetting.gameMode == GameMode.AI)
             {
-                aiFSM.SpawnPoint_Initialize();
+                _aiFSM.SpawnPointInitialize();
             }
 
-            inGameUI_Manager.Show_All_Panel();
-            inGameUI_Manager.Initialize_UI();
-            inGameUI_Manager.Hide_All_Panel();
-            inGameUI_Manager.Hide_TurnText();
+            _inGameUIManager.ShowAllPanel();
+            _inGameUIManager.InitializeUI();
+            _inGameUIManager.HideAllPanel();
+            _inGameUIManager.HideTurnText();
 
-            result_Panel.Hide();
+            _resultPanel.Hide();
 
-            cameraView.ChangeCameraView(cameraView.QuarterView_tr,
-                () => preventImage.SetActive(false));
+            _cameraView.ChangeCameraView(_cameraView.QuarterView,
+                () => _preventImage.SetActive(false));
         }
 
         public void StopGame()
         {
             StopAllCoroutines();
             isPlaying = false;
-            turnState.Stop();
+            _turnState.Stop();
         }
     }
 }

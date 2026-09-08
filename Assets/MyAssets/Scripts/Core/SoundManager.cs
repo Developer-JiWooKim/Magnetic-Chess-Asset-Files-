@@ -4,83 +4,83 @@ namespace Assets.MyAssets.Scripts.Core
 {
     public sealed class SoundManager : Singleton<SoundManager>
     {
-        public enum E_SFX_Name
+        public enum SfxName
         {
-            BUTTON_PRESS,
-            CHANGE_TURN,
-            DROPDOWN_PRESS,
-            MAGNETBALL_SPAWN,
-            MENU_BUTTON_PRESS,
-            SLIDER,
-            TIMER,
-            SAVE_BUTTON_PRESS,
+            ButtonPress,
+            ChangeTurn,
+            DropdownPress,
+            MagnetBallSpawn,
+            MenuButtonPress,
+            Slider,
+            Timer,
+            SaveButtonPress,
         }
 
-        public enum E_BGM_Name
+        public enum BgmName
         {
-            TITLE,
-            SCENE_CHANGE,
-            GAME,
+            Title,
+            SceneChange,
+            Game,
         }
 
-        [SerializeField] private AudioClip[] bgm = null;
-        [SerializeField] private AudioSource bgm_Player = null;
-        [SerializeField] private AudioClip[] sfx = null;
-        [SerializeField] private AudioSource[] sfx_Player = null;
+        [SerializeField] private AudioClip[] _bgm = null;
+        [SerializeField] private AudioSource _bgmPlayer = null;
+        [SerializeField] private AudioClip[] _sfx = null;
+        [SerializeField] private AudioSource[] _sfxPlayer = null;
 
         // const
-        private const float __DEFAULT_VOLUME_VALUE = 0.5f;
+        private const float DEFAULT_VOLUME = 0.5f;
 
         void Start() => Setup();
         private void Setup()
         {
-            bgm_Player.playOnAwake = true;
-            bgm_Player.loop = true;
-            Play_BGM(E_BGM_Name.TITLE);
+            _bgmPlayer.playOnAwake = true;
+            _bgmPlayer.loop = true;
+            PlayBGM(BgmName.Title);
 
-            SetVolume_BGM(DataManager.Instance.data.volume_value_BGM);
-            SetVolume_SFX(DataManager.Instance.data.volume_value_SFX);
+            SetVolumeBGM(DataManager.Instance.data.volumeBgm);
+            SetVolumeSFX(DataManager.Instance.data.volumeSfx);
         }
 
         public void SetDefaultVolume()
         {
-            SetVolume_BGM(__DEFAULT_VOLUME_VALUE);
-            SetVolume_SFX(__DEFAULT_VOLUME_VALUE);
+            SetVolumeBGM(DEFAULT_VOLUME);
+            SetVolumeSFX(DEFAULT_VOLUME);
         }
 
-        public void Play_BGM(E_BGM_Name bgm_Name)
+        public void PlayBGM(BgmName bgmName)
         {
-            bgm_Player.clip = bgm[(int)bgm_Name];
-            bgm_Player.Play();
+            _bgmPlayer.clip = _bgm[(int)bgmName];
+            _bgmPlayer.Play();
         }
 
-        public void SetVolume_BGM(float _volume)
+        public void SetVolumeBGM(float volume)
         {
-            bgm_Player.volume = _volume;
+            _bgmPlayer.volume = volume;
         }
 
-        public void SetVolume_SFX(float _volume)
+        public void SetVolumeSFX(float volume)
         {
-            for (int i = 0; i < sfx_Player.Length; i++)
+            for (int i = 0; i < _sfxPlayer.Length; i++)
             {
-                sfx_Player[i].volume = _volume;
+                _sfxPlayer[i].volume = volume;
             }
         }
 
-        public void Stop_BGM()
+        public void StopBGM()
         {
-            bgm_Player.Stop();
+            _bgmPlayer.Stop();
         }
 
-        public void Play_SFX(E_SFX_Name sfx_Name)
+        public void PlaySFX(SfxName sfxName)
         {
-            for (int j = 0; j < sfx_Player.Length; j++)
+            for (int j = 0; j < _sfxPlayer.Length; j++)
             {
 
-                if (!sfx_Player[j].isPlaying)
+                if (!_sfxPlayer[j].isPlaying)
                 {
-                    sfx_Player[j].clip = sfx[(int)sfx_Name];
-                    sfx_Player[j].Play();
+                    _sfxPlayer[j].clip = _sfx[(int)sfxName];
+                    _sfxPlayer[j].Play();
                     return;
                 }
             }

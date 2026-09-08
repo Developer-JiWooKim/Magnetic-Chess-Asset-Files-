@@ -1,25 +1,25 @@
 namespace Assets.MyAssets.Scripts.Match
 {
-    public enum PlayerName { Player_1, Player_2, Player_AI }
+    public enum PlayerName { Player1, Player2, PlayerAI }
 
     public sealed class Player
     {
         public PlayerName playerName;
 
-        private int pieceCount;
+        private int _pieceCount;
 
         public int PieceCount
         {
             get
             {
-                return pieceCount;
+                return _pieceCount;
             }
             set
             {
-                pieceCount = value;
+                _pieceCount = value;
             }
         }
 
-        public Player(PlayerName _playerName) => playerName = _playerName;
+        public Player(PlayerName playerName) => this.playerName = playerName;
     }
 }

@@ -8,7 +8,7 @@ namespace Assets.MyAssets.Scripts.Core
         public GameMode gameMode;
 
         public int pieceCount;
-        public int pieceCount_AI;
+        public int pieceCountAI;
 
         public int maxTurn;
         public float waitingTime;

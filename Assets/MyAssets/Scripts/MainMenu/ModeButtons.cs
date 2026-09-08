@@ -7,21 +7,21 @@ namespace Assets.MyAssets.Scripts.MainMenu
 {
     public sealed class ModeButtons : MonoBehaviour
     {
-        [SerializeField] private List<ModeBase> buttons;
+        [SerializeField] private List<ModeBase> _buttons;
 
         private void Start() => Setup();
 
         private void Setup()
         {
-            buttons = GetComponentsInChildren<ModeBase>().ToList();
+            _buttons = GetComponentsInChildren<ModeBase>().ToList();
 
-            if (buttons == null)
+            if (_buttons == null)
             {
-                Debug.Log("ModeButtons.cs - Setup() : buttons is null!!");
+                Debug.Log("ModeButtons.cs - Setup() : _buttons is null!!");
                 return;
             }
 
-            buttons.ForEach(modeButton =>
+            _buttons.ForEach(modeButton =>
             {
                 modeButton.Setup();
                 modeButton.PreparingMode();

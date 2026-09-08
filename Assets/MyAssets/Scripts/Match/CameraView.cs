@@ -6,20 +6,20 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class CameraView : MonoBehaviour
     {
-        [SerializeField] private Transform quarterView;
-        [SerializeField] private Transform topView;
-        [SerializeField] private Transform startPointView;
+        [SerializeField] private Transform _quarterView;
+        [SerializeField] private Transform _topView;
+        [SerializeField] private Transform _startPointView;
 
         // const
-        private const float __MOVE_SPEED = 3f;
+        private const float MOVE_SPEED = 3f;
 
-        public Transform QuarterView_tr
+        public Transform QuarterView
         {
             get
             {
-                if (quarterView != null)
+                if (_quarterView != null)
                 {
-                    return quarterView;
+                    return _quarterView;
                 }
                 else
                 {
@@ -28,49 +28,43 @@ namespace Assets.MyAssets.Scripts.Match
                 }
             }
         }
-        public Transform TopView_tr
+        public Transform TopView
         {
             get
             {
-                if (topView != null)
+                if (_topView != null)
                 {
-                    return topView;
+                    return _topView;
                 }
                 else
                 {
-                    Debug.Log("topView Transform is null");
+                    Debug.Log("_topView Transform is null");
                     return null;
                 }
             }
         }
-        public Transform StartPointView_tr
+        public Transform StartPointView
         {
             get
             {
-                if (startPointView != null)
+                if (_startPointView != null)
                 {
-                    return startPointView;
+                    return _startPointView;
                 }
                 else
                 {
-                    Debug.Log("startPointView Transform is null");
+                    Debug.Log("_startPointView Transform is null");
                     return null;
                 }
             }
-        }
-
-        public enum E_CameraView
-        {
-            QuarterView,
-            TopView,
         }
 
         private IEnumerator SmoothMoveCamera(Transform target, Action action = null)
         {
             while ((transform.position - target.position).magnitude > 0.05f)
             {
-                transform.position = Vector3.Lerp(transform.position, target.position, Time.deltaTime * __MOVE_SPEED);
-                transform.rotation = Quaternion.Lerp(transform.rotation, target.rotation, Time.deltaTime * __MOVE_SPEED);
+                transform.position = Vector3.Lerp(transform.position, target.position, Time.deltaTime * MOVE_SPEED);
+                transform.rotation = Quaternion.Lerp(transform.rotation, target.rotation, Time.deltaTime * MOVE_SPEED);
                 yield return null;
             }
             if (action != null)

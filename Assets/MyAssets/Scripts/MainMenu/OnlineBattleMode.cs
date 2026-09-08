@@ -7,7 +7,7 @@ namespace Assets.MyAssets.Scripts.MainMenu
     public sealed class OnlineBattleMode : ModeBase
     {
         [SerializeField]
-        private GameObject preparing;
+        private GameObject _preparing;
 
         public override void Setup() => isPreparing = true;
 
@@ -15,12 +15,12 @@ namespace Assets.MyAssets.Scripts.MainMenu
         {
             if (IsPreparing == true)
             {
-                preparing.SetActive(true);
+                _preparing.SetActive(true);
                 gameObject.GetComponent<Button>().interactable = false;
             }
             else
             {
-                preparing.SetActive(false);
+                _preparing.SetActive(false);
                 gameObject.GetComponent<Button>().interactable = true;
             }
         }

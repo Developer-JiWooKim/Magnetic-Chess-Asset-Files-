@@ -6,7 +6,7 @@ namespace Assets.MyAssets.Scripts.UI
     {
         public override void Show()
         {
-            gameObject.SetActive(DontDestroy_Menu.Instance.CurrentScene == DontDestroy_Menu.SceneName.Game);
+            gameObject.SetActive(DontDestroyMenu.Instance.CurrentScene == DontDestroyMenu.SceneName.Game);
         }
     }
 }

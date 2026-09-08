@@ -9,50 +9,50 @@ namespace Assets.MyAssets.Scripts.UI
     public sealed class MenuList : MonoBehaviour
     {
         // consts
-        private const float TITLE_SPACING_HorizontalLayoutGroup = -80f;
-        private const float GAME_SPACING_HorizontalLayoutGroup = 20f;
+        private const float TITLE_SPACING = -80f;
+        private const float GAME_SPACING = 20f;
 
-        [SerializeField] private bool isShowButton = false;
+        [SerializeField] private bool _isShowButton = false;
 
-        private List<UIPanel> buttons;
-        private HorizontalLayoutGroup horizontalLayoutGroup;
+        private List<UIPanel> _buttons;
+        private HorizontalLayoutGroup _horizontalLayoutGroup;
 
         private void Start() => Setup();
         private void Setup()
         {
-            buttons = GetComponentsInChildren<UIPanel>(true).ToList();
+            _buttons = GetComponentsInChildren<UIPanel>(true).ToList();
 
-            horizontalLayoutGroup = GetComponent<HorizontalLayoutGroup>();
-            horizontalLayoutGroup.spacing = TITLE_SPACING_HorizontalLayoutGroup;
+            _horizontalLayoutGroup = GetComponent<HorizontalLayoutGroup>();
+            _horizontalLayoutGroup.spacing = TITLE_SPACING;
 
             GameManager.Instance.ChangeSceneAction += ChangeLayoutGroupSpacing;
         }
 
         private void ChangeLayoutGroupSpacing()
         {
-            bool istitle = DontDestroy_Menu.Instance.CurrentScene == DontDestroy_Menu.SceneName.Title;
-            horizontalLayoutGroup.spacing = istitle ?
-                    TITLE_SPACING_HorizontalLayoutGroup : GAME_SPACING_HorizontalLayoutGroup;
+            bool istitle = DontDestroyMenu.Instance.CurrentScene == DontDestroyMenu.SceneName.Title;
+            _horizontalLayoutGroup.spacing = istitle ?
+                    TITLE_SPACING : GAME_SPACING;
         }
 
         public void OnClickListButton()
         {
-            if (isShowButton)
+            if (_isShowButton)
             {
-                foreach (UIPanel btn in buttons)
+                foreach (UIPanel btn in _buttons)
                 {
                     btn.Hide();
                 }
 
-                isShowButton = false;
+                _isShowButton = false;
             }
             else
             {
-                foreach (UIPanel btn in buttons)
+                foreach (UIPanel btn in _buttons)
                 {
                     btn.Show();
                 }
-                isShowButton = true;
+                _isShowButton = true;
             }
         }
     }

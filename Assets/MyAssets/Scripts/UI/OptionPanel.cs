@@ -7,14 +7,14 @@ namespace Assets.MyAssets.Scripts.UI
     public sealed class OptionPanel : UIPanel
     {
         [Header("Slider")]
-        [SerializeField] private Slider slider_BGM;
-        [SerializeField] private Slider slider_SFX;
+        [SerializeField] private Slider _sliderBGM;
+        [SerializeField] private Slider _sliderSFX;
 
         private void Start() => Setup();
         private void Setup()
         {
-            slider_BGM.value = DataManager.Instance.data.volume_value_BGM;
-            slider_SFX.value = DataManager.Instance.data.volume_value_SFX;
+            _sliderBGM.value = DataManager.Instance.data.volumeBgm;
+            _sliderSFX.value = DataManager.Instance.data.volumeSfx;
 
             SetVolumeBGM();
             SetVolumeSFX();
@@ -27,29 +27,29 @@ namespace Assets.MyAssets.Scripts.UI
 
         public void SetVolumeBGM()
         {
-            DataManager.Instance.data.volume_value_BGM = slider_BGM.value;
-            SoundManager.Instance.SetVolume_BGM(slider_BGM.value);
+            DataManager.Instance.data.volumeBgm = _sliderBGM.value;
+            SoundManager.Instance.SetVolumeBGM(_sliderBGM.value);
         }
 
         public void SetVolumeSFX()
         {
-            DataManager.Instance.data.volume_value_SFX = slider_SFX.value;
-            SoundManager.Instance.SetVolume_SFX(slider_SFX.value);
+            DataManager.Instance.data.volumeSfx = _sliderSFX.value;
+            SoundManager.Instance.SetVolumeSFX(_sliderSFX.value);
         }
 
         public void PlaySoundDropDownPress()
         {
-            SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.DROPDOWN_PRESS);
+            SoundManager.Instance.PlaySFX(SoundManager.SfxName.DropdownPress);
         }
 
         public void PlaySoundSlider()
         {
-            SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.SLIDER);
+            SoundManager.Instance.PlaySFX(SoundManager.SfxName.Slider);
         }
 
         public void PlaySoundSaveButtonPress()
         {
-            SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.SAVE_BUTTON_PRESS);
+            SoundManager.Instance.PlaySFX(SoundManager.SfxName.SaveButtonPress);
         }
     }
 }

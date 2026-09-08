@@ -5,11 +5,11 @@ using Assets.MyAssets.Scripts.UI;
 
 namespace Assets.MyAssets.Scripts.MainMenu
 {
-    public sealed class GuideText_FadeEffect : MonoBehaviour
+    public sealed class GuideTextFadeEffect : MonoBehaviour
     {
-        [SerializeField] private TextMeshProUGUI guideText;
+        [SerializeField] private TextMeshProUGUI _guideText;
 
-        private float fadeTime = 1f;
+        private float _fadeTime = 1f;
 
         private void Start()
         {
@@ -20,8 +20,8 @@ namespace Assets.MyAssets.Scripts.MainMenu
         {
             while (gameObject.activeSelf)
             {
-                yield return StartCoroutine(FadeEffect_UI.FadeOut_TextMeshPro(guideText, fadeTime));
-                yield return StartCoroutine(FadeEffect_UI.FadeIn_TextMeshPro(guideText, fadeTime));
+                yield return StartCoroutine(FadeEffectUI.FadeOutTextMeshPro(_guideText, _fadeTime));
+                yield return StartCoroutine(FadeEffectUI.FadeInTextMeshPro(_guideText, _fadeTime));
             }
         }
     }

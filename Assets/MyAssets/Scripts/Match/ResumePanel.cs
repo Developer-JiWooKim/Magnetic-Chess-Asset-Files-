@@ -7,19 +7,19 @@ namespace Assets.MyAssets.Scripts.Match
 {
     public sealed class ResumePanel : UIPanel
     {
-        [SerializeField] private GameObject resumePanel;
+        [SerializeField] private GameObject _resumePanel;
 
         // events
         public event Action OnReplay;
         public event Action OnSelect;
 
-        public void PlaySound_Button_Press()
+        public void PlaySoundButtonPress()
         {
-            SoundManager.Instance.Play_SFX(SoundManager.E_SFX_Name.BUTTON_PRESS);
+            SoundManager.Instance.PlaySFX(SoundManager.SfxName.ButtonPress);
         }
 
-        public override void Show() => resumePanel.SetActive(true);
-        public override void Hide() => resumePanel.SetActive(false);
+        public override void Show() => _resumePanel.SetActive(true);
+        public override void Hide() => _resumePanel.SetActive(false);
 
         public void OnClickReplayButton()
         {

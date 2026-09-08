@@ -312,8 +312,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 2128358146}
-        m_TargetAssemblyTypeName: Menu_Manager, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_TargetAssemblyTypeName: MenuManager, Assembly-CSharp
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -537,9 +537,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   data:
-    isFirst: 0
-    volume_value_BGM: 0
-    volume_value_SFX: 0
+    isFirstRun: 0
+    volumeBgm: 0
+    volumeSfx: 0
 --- !u!4 &68544637
 Transform:
   m_ObjectHideFlags: 0
@@ -682,7 +682,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1401899690}
         m_TargetAssemblyTypeName: ResumePanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1259,7 +1259,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1f1fee769c4c094fb1e0057a1b03c77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  guideText: {fileID: 302954296}
+  _guideText: {fileID: 302954296}
 --- !u!114 &302954296
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2166,11 +2166,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a63a1a098a9295c40a266d2c9ca2c507, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bgm:
+  _bgm:
   - {fileID: 8300000, guid: adfba7d641c9d7c4c8d8ad9097b33a31, type: 3}
   - {fileID: 8300000, guid: c8f92b96b61ca164e8093e30bfaccd32, type: 3}
   - {fileID: 8300000, guid: 5f0f3fbf0dd8dd2428d717416b9e68f9, type: 3}
-  sfx:
+  _bgmPlayer: {fileID: 1813724381}
+  _sfx:
   - {fileID: 8300000, guid: 5e476aa4406562a4f80f03d46f24570c, type: 3}
   - {fileID: 8300000, guid: fc32274de3a73d342bdef77211c5874e, type: 3}
   - {fileID: 8300000, guid: 58156000799dcac4086f4dc13711cc77, type: 3}
@@ -2179,8 +2180,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 5e438f0b8ae3f5b43bef027b7983f4d8, type: 3}
   - {fileID: 8300000, guid: 38d44c09f674e3b459a65c4b13fad7ce, type: 3}
   - {fileID: 8300000, guid: 168550fee35b4e647aa38daf4179536c, type: 3}
-  bgm_Player: {fileID: 1813724381}
-  sfx_Player:
+  _sfxPlayer:
   - {fileID: 1654816341}
   - {fileID: 1173266528}
   - {fileID: 767266229}
@@ -2476,7 +2476,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1401899690}
         m_TargetAssemblyTypeName: ResumePanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2724,7 +2724,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1503043772}
         m_TargetAssemblyTypeName: HelpPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press_
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3300,10 +3300,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d2deb0f135d92a4fb2fe34e9f2d16b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  background: {fileID: 511781468}
-  menu: {fileID: 1200105619}
-  sizeUpSpeed: 1000
-  isShowList: 0
+  _background: {fileID: 511781468}
+  _menu: {fileID: 1200105619}
+  _sizeUpSpeed: 1000
+  _isShowList: 0
 --- !u!1 &763011347
 GameObject:
   m_ObjectHideFlags: 0
@@ -4317,7 +4317,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1503043772}
         m_TargetAssemblyTypeName: HelpPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press_
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -25521,7 +25521,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1401899690}
         m_TargetAssemblyTypeName: ResumePanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -25738,7 +25738,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd7758003c4da724abc3854fc20b4c94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isShowButton: 0
+  _isShowButton: 0
 --- !u!114 &1200105620
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25817,7 +25817,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cb6faf7f3adbe042a1b333f45e8a768, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  exitPanel: {fileID: 1201791838}
+  _exitPanel: {fileID: 1201791838}
 --- !u!114 &1201791841
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26300,14 +26300,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2e56c7cb9a1df9143b2b414831b6beba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameSetting:
+  _gameSetting:
     gameMode: 0
     pieceCount: 0
-    pieceCount_AI: 0
+    pieceCountAI: 0
     maxTurn: 0
     waitingTime: 0
-  loadingWindow: {fileID: 1349099564}
-  percent: {fileID: 1399305234}
+  _loadingWindow: {fileID: 1349099564}
+  _percent: {fileID: 1399305234}
 --- !u!4 &1286371030
 Transform:
   m_ObjectHideFlags: 0
@@ -26628,7 +26628,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1201791840}
         m_TargetAssemblyTypeName: ExitPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press_
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -26887,7 +26887,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88b9d119c2016cc41a803ae17d938ab5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resumePanel: {fileID: 1401899685}
+  _resumePanel: {fileID: 1401899685}
 --- !u!1 &1404577180
 GameObject:
   m_ObjectHideFlags: 0
@@ -26981,8 +26981,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 184f432ffaa694447adac6f901892273, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panel_Name: 0
-  animator_Camera: {fileID: 1752371959}
+  panelName: 0
+  _animatorCamera: {fileID: 1752371959}
 --- !u!225 &1404577185
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -27815,8 +27815,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 2128358146}
-        m_TargetAssemblyTypeName: Menu_Manager, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_TargetAssemblyTypeName: MenuManager, Assembly-CSharp
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -27827,8 +27827,8 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 2128358146}
-        m_TargetAssemblyTypeName: Menu_Manager, Assembly-CSharp
-        m_MethodName: Change_Start_to_ModeSelect
+        m_TargetAssemblyTypeName: MenuManager, Assembly-CSharp
+        m_MethodName: ChangeStartToModeSelect
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -28389,7 +28389,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1401899690}
         m_TargetAssemblyTypeName: ResumePanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -29067,7 +29067,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 278a15c0cab010b4a8148605840f92eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tablet_logic: {fileID: 1955879512}
+  _tabletLogic: {fileID: 1955879512}
 --- !u!224 &1759925223 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5674343821732938959, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
@@ -29954,7 +29954,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1201791840}
         m_TargetAssemblyTypeName: ExitPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press_
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -29966,7 +29966,7 @@ MonoBehaviour:
         m_CallState: 2
       - m_Target: {fileID: 1201791840}
         m_TargetAssemblyTypeName: ExitPanel, Assembly-CSharp
-        m_MethodName: OnClickExit_yes_Button
+        m_MethodName: OnClickExitYesButton
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -30099,7 +30099,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1503043772}
         m_TargetAssemblyTypeName: HelpPanel, Assembly-CSharp
-        m_MethodName: PlaySound_Button_Press_
+        m_MethodName: PlaySoundButtonPress
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -31163,7 +31163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 878778126d33a7d4d91ccbb8d0eb8588, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Tablet_UI: {fileID: 1955879512}
+  _tabletUI: {fileID: 1955879512}
   currentName: 0
 --- !u!114 &2132026926
 MonoBehaviour:
@@ -31721,6 +31721,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2575940449445057042, guid: 4ec09707f4808c046aa4d13d3bfd002e,
+        type: 3}
+      propertyPath: m_PresetInfoIsWorld
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2622987307315314601, guid: 4ec09707f4808c046aa4d13d3bfd002e,
         type: 3}
       propertyPath: m_Name
@@ -31844,6 +31849,11 @@ PrefabInstance:
     - target: {fileID: 6369550767024046768, guid: 4ec09707f4808c046aa4d13d3bfd002e,
         type: 3}
       propertyPath: modeSelectPanel
+      value: 
+      objectReference: {fileID: 1759925224}
+    - target: {fileID: 6369550767024046768, guid: 4ec09707f4808c046aa4d13d3bfd002e,
+        type: 3}
+      propertyPath: _modeSelectPanel
       value: 
       objectReference: {fileID: 1759925224}
     - target: {fileID: 6534173324282761515, guid: 4ec09707f4808c046aa4d13d3bfd002e,
@@ -32027,7 +32037,7 @@ PrefabInstance:
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Button_Press
+      value: PlaySoundButtonPress
       objectReference: {fileID: 0}
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32037,12 +32047,12 @@ PrefabInstance:
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_MethodName
-      value: Change_ModeSelect_to_GameSetting
+      value: ChangeModeSelectToGameSetting
       objectReference: {fileID: 0}
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32052,7 +32062,7 @@ PrefabInstance:
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 830361577056034885, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32097,7 +32107,7 @@ PrefabInstance:
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Button_Press
+      value: PlaySoundButtonPress
       objectReference: {fileID: 0}
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32107,12 +32117,12 @@ PrefabInstance:
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_MethodName
-      value: Change_ModeSelect_to_GameSetting
+      value: ChangeModeSelectToGameSetting
       objectReference: {fileID: 0}
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32122,7 +32132,7 @@ PrefabInstance:
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 2770643787899900314, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32232,7 +32242,7 @@ PrefabInstance:
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: PlaySound_Button_Press
+      value: PlaySoundButtonPress
       objectReference: {fileID: 0}
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32242,12 +32252,12 @@ PrefabInstance:
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_MethodName
-      value: Change_ModeSelect_to_GameSetting
+      value: ChangeModeSelectToGameSetting
       objectReference: {fileID: 0}
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
@@ -32257,7 +32267,7 @@ PrefabInstance:
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[2].m_TargetAssemblyTypeName
-      value: Menu_Manager, Assembly-CSharp
+      value: MenuManager, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 5220275208354989007, guid: 9e9e57ed324d6dc48bd51f10ae7fddd8,
         type: 3}
