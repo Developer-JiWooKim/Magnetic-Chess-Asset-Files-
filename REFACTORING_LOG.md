@@ -1617,6 +1617,18 @@ protected void EnsureBound();         // Awake와 Show 양쪽에서 부르되 �
 배치 순서에 상관없이 배선이 보장된다. 이 개편의 목적이 "조용히 죽는 배선을 없애는 것"인데,
 그 자리에 같은 종류의 함정을 새로 만들 수는 없었다.
 
+### Missing Script 때문에 프리팹 저장이 막히는 것
+
+스크립트를 지우면 그것이 붙어 있던 오브젝트에 깨진 컴포넌트가 남고,
+그 상태에서는 <b>프리팹으로 만드는 것 자체가 거부된다</b>
+("You are trying to save a Prefab with a missing script").
+이번에 스크립트를 9개 지웠으므로 씬 두 곳과 프리팹에 흩어져 남는다.
+
+`Assets/MyAssets/Editor/MissingScriptCleaner.cs` 를 추가했다.
+`Tools > Magnetic Chess > Remove Missing Scripts` — 선택한 오브젝트만, 또는 MyAssets 전체.
+프리팹 인스턴스의 컴포넌트는 인스턴스에서 지울 수 없으므로(Unity 제약)
+건너뛰면서 어느 원본을 고쳐야 하는지 콘솔에 남긴다.
+
 ### 옵션 창을 여는 것만으로 슬라이더 효과음이 나던 것
 
 `_sliderBGM.value = ...` 는 `onValueChanged` 를 돌린다. `SetValueWithoutNotify` 로 바꿨다.

@@ -21,8 +21,28 @@
 
 ## 1. 사라진 스크립트 정리
 
-지운 스크립트가 붙어 있던 오브젝트에서 **Missing Script 컴포넌트를 제거**한다.
-(컴포넌트 헤더 우클릭 → Remove Component)
+지운 스크립트가 붙어 있던 오브젝트에는 **Missing Script 컴포넌트가 남는다.**
+이걸 안 치우면 3절에서 프리팹을 만들 때 이렇게 막힌다:
+
+> You are trying to save a Prefab with a missing script.
+> Please change the script or remove it from the GameObject 'Exit Button'.
+
+**한 번에 치우는 법**
+
+`Tools > Magnetic Chess > Remove Missing Scripts (MyAssets 전체)`
+— MyAssets 아래의 모든 씬과 프리팹을 훑어 제거하고 저장한다. 콘솔에 어디를 고쳤는지 찍는다.
+
+계층에서 고른 것만 훑으려면
+`Tools > Magnetic Chess > Remove Missing Scripts (계층에서 선택한 오브젝트)`.
+프리팹으로 만들기 직전에 그 오브젝트만 확인할 때 쓴다.
+
+> 프리팹 **인스턴스**의 컴포넌트는 인스턴스에서 지울 수 없다(Unity 제약).
+> 그런 것이 있으면 도구가 건너뛰면서 어느 원본 프리팹을 고쳐야 하는지 콘솔에 알려 준다.
+> 그 프리팹을 열어 같은 메뉴를 다시 돌리면 된다.
+
+하나씩 지우려면 인스펙터에서 `Missing (Mono Script)` 헤더 우클릭 → Remove Component.
+
+**어디에 남아 있나**
 
 | 지운 스크립트 | 붙어 있던 곳 |
 |---|---|

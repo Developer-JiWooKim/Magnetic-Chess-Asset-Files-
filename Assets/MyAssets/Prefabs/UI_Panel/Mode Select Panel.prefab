@@ -1488,7 +1488,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c213e4ebe0c8a547b53e4e4ddf4e4bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panelName: 1
+  _canvasGroup: {fileID: 2682265348488515926}
+  _modeButtons: {fileID: 3411044622796296164}
 --- !u!225 &2682265348488515926
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1579,7 +1580,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a05fe1494405c04bbf8439cb6fe8c1e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _buttons: []
 --- !u!1 &6558417322830104059
 GameObject:
   m_ObjectHideFlags: 0

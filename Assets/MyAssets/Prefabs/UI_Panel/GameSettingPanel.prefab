@@ -4215,11 +4215,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9aa3db17390bc9c4e9b41fc63b9e8f6f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panelName: 2
   _pieceCountAIOption: {fileID: 3262315882796250093}
-  _fadeWindow: {fileID: 0}
-  _animatorCamera: {fileID: 0}
-  _canvasGroup: {fileID: 0}
+  _canvasGroup: {fileID: 3181377095012805637}
+  _playButton: {fileID: 6806580236342834195}
+  _backButton: {fileID: 7245270411468405909}
 --- !u!225 &3181377095012805637
 CanvasGroup:
   m_ObjectHideFlags: 0
