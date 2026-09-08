@@ -27,6 +27,66 @@ namespace Assets.MyAssets.EditorTools
     public static class ClearUnityEventBindings
     {
         private const string MENU_PATH = "Tools/Magnetic Chess/Clear UnityEvent Bindings (선택한 에셋)";
+        private const string MENU_PATH_HIERARCHY = "Tools/Magnetic Chess/Clear UnityEvent Bindings (계층에서 선택한 오브젝트)";
+
+        /// <summary>
+        /// 열려 있는 씬에서 선택한 오브젝트와 그 자식만 비운다.
+        ///
+        /// 패널을 하나씩 코드로 옮기는 중이라면 씬 전체를 비울 수 없다.
+        /// 아직 안 옮긴 패널의 배선까지 같이 죽기 때문이다.
+        /// 옮긴 패널만 골라서 비울 때 쓴다.
+        /// </summary>
+        [MenuItem(MENU_PATH_HIERARCHY)]
+        private static void ClearSelectedInHierarchy()
+        {
+            GameObject[] selected = Selection.gameObjects;
+
+            if (selected.Length == 0)
+            {
+                EditorUtility.DisplayDialog("Clear UnityEvent Bindings",
+                    "Hierarchy 창에서 오브젝트를 선택한 뒤 실행해야 한다.", "확인");
+                return;
+            }
+
+            string names = "";
+            for (int i = 0; i < selected.Length && i < 8; i++)
+            {
+                names += "\n  · " + selected[i].name;
+            }
+
+            if (EditorUtility.DisplayDialog("Clear UnityEvent Bindings",
+                "선택한 오브젝트와 그 자식의 인스펙터 UnityEvent 호출을 비운다." + names
+                + "\n\n코드 배선(AddListener)이 이미 들어가 있는지 확인했는가?", "비운다", "취소") == false)
+            {
+                return;
+            }
+
+            int cleared = 0;
+            HashSet<Scene> touched = new HashSet<Scene>();
+
+            foreach (GameObject go in selected)
+            {
+                if (go.scene.IsValid() == false)
+                {
+                    Debug.LogWarning("[ClearBindings] 씬 오브젝트가 아니라 건너뛴다: " + go.name);
+                    continue;
+                }
+
+                cleared += ClearHierarchy(go, go.scene.path);
+                touched.Add(go.scene);
+            }
+
+            if (cleared > 0)
+            {
+                foreach (Scene scene in touched)
+                {
+                    EditorSceneManager.MarkSceneDirty(scene);
+                    EditorSceneManager.SaveScene(scene);
+                }
+            }
+
+            Debug.Log("[ClearBindings] 호출 " + cleared + "개를 비웠다. (씬 " + touched.Count + "개 저장)");
+        }
 
         [MenuItem(MENU_PATH)]
         private static void ClearSelected()
