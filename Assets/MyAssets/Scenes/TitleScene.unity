@@ -26888,6 +26888,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _resumePanel: {fileID: 1401899685}
+  _replayButton: {fileID: 1671373584}
+  _selectModeButton: {fileID: 490674173}
 --- !u!1 &1404577180
 GameObject:
   m_ObjectHideFlags: 0
@@ -31426,9 +31428,24 @@ PrefabInstance:
       objectReference: {fileID: 1349099564}
     - target: {fileID: 3202016828244019892, guid: 1df35846939618045860f2a830272020,
         type: 3}
+      propertyPath: _fadeWindow
+      value: 
+      objectReference: {fileID: 1349099564}
+    - target: {fileID: 3202016828244019892, guid: 1df35846939618045860f2a830272020,
+        type: 3}
       propertyPath: canvasGroup
       value: 
       objectReference: {fileID: 1702158425}
+    - target: {fileID: 3202016828244019892, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: _canvasGroup
+      value: 
+      objectReference: {fileID: 1702158425}
+    - target: {fileID: 3202016828244019892, guid: 1df35846939618045860f2a830272020,
+        type: 3}
+      propertyPath: _animatorCamera
+      value: 
+      objectReference: {fileID: 1752371959}
     - target: {fileID: 3202016828244019892, guid: 1df35846939618045860f2a830272020,
         type: 3}
       propertyPath: animator_Camera

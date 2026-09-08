@@ -91261,6 +91261,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _winPlayerText: {fileID: 74765283}
   _endTurnText: {fileID: 2014754392}
+  _replayButton: {fileID: 907568193}
+  _selectModeButton: {fileID: 910187894}
+  _quitButton: {fileID: 787662281}
 --- !u!224 &1361996355
 RectTransform:
   m_ObjectHideFlags: 0
